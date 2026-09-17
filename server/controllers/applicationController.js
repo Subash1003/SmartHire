@@ -216,3 +216,17 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
 
   sendSuccess(res, { message: 'Application status updated successfully', data: { application } });
 });
+
+export const makeDecision = asyncHandler(async (req, res) => {
+  const application = await findOrgScopedApplication(req);
+  const { status, notes } = req.body;
+
+  application.status = status;
+  application.statusHistory.push({ status, changedBy: req.user._id });
+  application.decision = { status, madeBy: req.user._id, madeAt: new Date(), notes: notes || '' };
+  await application.save();
+
+  const populated = await application.populate('decision.madeBy', 'name');
+
+  sendSuccess(res, { message: 'Hiring decision recorded successfully', data: { application: populated } });
+});

@@ -8,8 +8,26 @@ import Button from '../../components/ui/Button';
 import FloatingSelect from '../../components/ui/FloatingSelect';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
+import { RECOMMENDATION_LABELS, RECOMMENDATION_VARIANT } from '../../validators/evaluation.schema';
 
-const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }));
+const PIPELINE_STATUS_OPTIONS = Object.entries(STATUS_LABELS)
+  .filter(([value]) => value !== 'selected' && value !== 'rejected')
+  .map(([value, label]) => ({ value, label }));
+
+const DECISION_OPTIONS = [
+  { value: 'selected', label: 'Selected' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'on_hold', label: 'On Hold' },
+];
+
+const RATING_FIELDS = [
+  { key: 'technicalSkills', label: 'Technical skills' },
+  { key: 'problemSolving', label: 'Problem solving' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'roleKnowledge', label: 'Role knowledge' },
+  { key: 'codingSkills', label: 'Coding skills' },
+  { key: 'overallRating', label: 'Overall rating' },
+];
 
 export default function RecruiterApplicationDetail() {
   const { id } = useParams();
@@ -18,9 +36,17 @@ export default function RecruiterApplicationDetail() {
   const [statusSaving, setStatusSaving] = useState(false);
   const [statusError, setStatusError] = useState('');
 
+  const [decisionValue, setDecisionValue] = useState('selected');
+  const [decisionNotes, setDecisionNotes] = useState('');
+  const [decisionSaving, setDecisionSaving] = useState(false);
+  const [decisionError, setDecisionError] = useState('');
+
   const [notes, setNotes] = useState([]);
   const [notesStatus, setNotesStatus] = useState('loading');
   const [noteError, setNoteError] = useState('');
+
+  const [evaluations, setEvaluations] = useState([]);
+  const [evaluationsStatus, setEvaluationsStatus] = useState('loading');
 
   const {
     register,
@@ -50,9 +76,21 @@ export default function RecruiterApplicationDetail() {
       .catch(() => setNotesStatus('error'));
   };
 
+  const loadEvaluations = () => {
+    setEvaluationsStatus('loading');
+    applicationsApi
+      .listEvaluations(id)
+      .then((res) => {
+        setEvaluations(res.data.data.evaluations);
+        setEvaluationsStatus('success');
+      })
+      .catch(() => setEvaluationsStatus('error'));
+  };
+
   useEffect(() => {
     loadApplication();
     loadNotes();
+    loadEvaluations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -66,6 +104,20 @@ export default function RecruiterApplicationDetail() {
       setStatusError(getApiErrorMessage(err, 'Unable to update status.'));
     } finally {
       setStatusSaving(false);
+    }
+  };
+
+  const handleDecision = async () => {
+    setDecisionError('');
+    setDecisionSaving(true);
+    try {
+      await applicationsApi.makeDecision(id, decisionValue, decisionNotes);
+      setDecisionNotes('');
+      loadApplication();
+    } catch (err) {
+      setDecisionError(getApiErrorMessage(err, 'Unable to record this decision.'));
+    } finally {
+      setDecisionSaving(false);
     }
   };
 
@@ -144,7 +196,7 @@ export default function RecruiterApplicationDetail() {
               label="Status"
               value={statusValue}
               onChange={(e) => setStatusValue(e.target.value)}
-              options={STATUS_OPTIONS}
+              options={PIPELINE_STATUS_OPTIONS}
             />
           </div>
           <Button onClick={handleStatusUpdate} disabled={statusSaving || statusValue === application.status}>
@@ -162,6 +214,78 @@ export default function RecruiterApplicationDetail() {
                   {entry.changedBy?.name ? `by ${entry.changedBy.name}` : ''} on{' '}
                   {new Date(entry.changedAt).toLocaleString()}
                 </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card card--padded card--shadow application-detail__status-card">
+        <h2 className="profile-page__section-title">Final hiring decision</h2>
+        <p className="text-faint">Only recruiters and admins can make this call — it is recorded permanently.</p>
+
+        {application.decision && (
+          <p className="application-detail__applied-on">
+            <span className="application-detail__label">Current decision:</span>{' '}
+            <Badge variant={STATUS_VARIANT[application.decision.status]}>{STATUS_LABELS[application.decision.status]}</Badge>{' '}
+            <span className="text-faint">
+              by {application.decision.madeBy?.name} on {new Date(application.decision.madeAt).toLocaleString()}
+            </span>
+            {application.decision.notes && <span className="text-faint"> — {application.decision.notes}</span>}
+          </p>
+        )}
+
+        <div className="application-detail__status-row">
+          <div className="filter-field">
+            <FloatingSelect
+              id="decisionValue"
+              label="Decision"
+              value={decisionValue}
+              onChange={(e) => setDecisionValue(e.target.value)}
+              options={DECISION_OPTIONS}
+            />
+          </div>
+          <Button variant="danger" onClick={handleDecision} disabled={decisionSaving}>
+            {decisionSaving ? 'Recording...' : 'Record decision'}
+          </Button>
+        </div>
+        <FloatingTextarea
+          id="decisionNotes"
+          label="Decision notes (optional)"
+          rows={2}
+          value={decisionNotes}
+          onChange={(e) => setDecisionNotes(e.target.value)}
+        />
+        {decisionError && <p className="text-error">{decisionError}</p>}
+      </section>
+
+      <section className="card card--padded card--shadow application-detail__status-card">
+        <h2 className="profile-page__section-title">Evaluations</h2>
+
+        {evaluationsStatus === 'loading' && <p className="text-muted">Loading evaluations...</p>}
+        {evaluationsStatus === 'error' && <p className="text-error">Unable to load evaluations.</p>}
+        {evaluationsStatus === 'success' && evaluations.length === 0 && (
+          <p className="text-faint">No evaluations submitted yet.</p>
+        )}
+        {evaluationsStatus === 'success' && evaluations.length > 0 && (
+          <ul className="application-detail__notes-list">
+            {evaluations.map((evaluation) => (
+              <li key={evaluation._id} className="application-detail__note-item">
+                <div className="cluster cluster--gap-2">
+                  <span className="application-detail__label capitalize">
+                    {evaluation.interview?.type} interview (round {evaluation.interview?.round})
+                  </span>
+                  <Badge variant={RECOMMENDATION_VARIANT[evaluation.recommendation]}>
+                    {RECOMMENDATION_LABELS[evaluation.recommendation]}
+                  </Badge>
+                </div>
+                <p className="text-faint">
+                  {evaluation.interviewerId?.name} &middot; {new Date(evaluation.createdAt).toLocaleString()}
+                </p>
+                <p className="application-detail__note-content">
+                  {RATING_FIELDS.map((f) => `${f.label}: ${evaluation[f.key]}/10`).join(' · ')}
+                </p>
+                {evaluation.feedback && <p className="application-detail__note-content">{evaluation.feedback}</p>}
               </li>
             ))}
           </ul>

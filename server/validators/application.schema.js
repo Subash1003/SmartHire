@@ -8,8 +8,17 @@ export const createApplicationSchema = z.object({
   availability: z.string().trim().max(200).optional().or(z.literal('')),
 });
 
+// Selected/Rejected are terminal, authorized decisions — reachable only via
+// POST /applications/:id/decision, not this general pipeline-move endpoint.
+const PIPELINE_STATUSES = APPLICATION_STATUSES.filter((s) => s !== 'selected' && s !== 'rejected');
+
 export const updateApplicationStatusSchema = z.object({
-  status: z.enum(APPLICATION_STATUSES),
+  status: z.enum(PIPELINE_STATUSES),
+});
+
+export const makeDecisionSchema = z.object({
+  status: z.enum(['selected', 'rejected', 'on_hold']),
+  notes: z.string().trim().max(2000).optional().or(z.literal('')),
 });
 
 export const listApplicationsQuerySchema = z.object({

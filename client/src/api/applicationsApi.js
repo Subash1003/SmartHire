@@ -7,4 +7,6 @@ export const applicationsApi = {
   updateStatus: (id, status) => axiosClient.patch(`/applications/${id}/status`, { status }),
   listNotes: (id) => axiosClient.get(`/applications/${id}/notes`),
   createNote: (id, content) => axiosClient.post(`/applications/${id}/notes`, { content }),
+  listEvaluations: (id) => axiosClient.get(`/applications/${id}/evaluations`),
+  makeDecision: (id, status, notes) => axiosClient.post(`/applications/${id}/decision`, { status, notes }),
 };

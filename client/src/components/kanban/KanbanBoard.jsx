@@ -44,7 +44,11 @@ export default function KanbanBoard() {
     }));
 
     try {
-      await applicationsApi.updateStatus(applicationId, newStatus);
+      if (newStatus === 'selected' || newStatus === 'rejected') {
+        await applicationsApi.makeDecision(applicationId, newStatus, '');
+      } else {
+        await applicationsApi.updateStatus(applicationId, newStatus);
+      }
     } catch {
       setState((s) => ({ ...s, applications: previousApplications }));
       setActionError('Unable to update this candidate’s status. Please try again.');

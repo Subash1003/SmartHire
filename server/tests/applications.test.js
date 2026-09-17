@@ -390,3 +390,81 @@ describe('Interviewer access to an application', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('PATCH /api/v1/applications/:id/status rejects terminal decisions', () => {
+  it('rejects "selected" and "rejected" — those require the decision endpoint', async () => {
+    const { agent: recruiterAgent, csrfToken, user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const { agent: candidate, csrfToken: candCsrf, user: candidateUser } = await createAndLoginUser('candidate');
+    await giveCandidateResume(candidateUser._id);
+    const createRes = await candidate.post('/api/v1/applications').set('X-CSRF-Token', candCsrf).send({ jobId: job._id });
+    const applicationId = createRes.body.data.application._id;
+
+    const selectedRes = await recruiterAgent
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ status: 'selected' });
+    expect(selectedRes.status).toBe(400);
+
+    const rejectedRes = await recruiterAgent
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ status: 'rejected' });
+    expect(rejectedRes.status).toBe(400);
+  });
+});
+
+describe('POST /api/v1/applications/:id/decision', () => {
+  it('rejects candidate and interviewer roles', async () => {
+    const { user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const { agent: candidate, csrfToken, user: candidateUser } = await createAndLoginUser('candidate');
+    await giveCandidateResume(candidateUser._id);
+    const createRes = await candidate.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: job._id });
+    const applicationId = createRes.body.data.application._id;
+
+    const res = await candidate
+      .post(`/api/v1/applications/${applicationId}/decision`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ status: 'selected', notes: 'trying to self-select' });
+    expect(res.status).toBe(403);
+  });
+
+  it('records the decision maker, timestamp, and notes, and updates status + history', async () => {
+    const { agent: recruiterAgent, csrfToken, user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const { agent: candidate, csrfToken: candCsrf, user: candidateUser } = await createAndLoginUser('candidate');
+    await giveCandidateResume(candidateUser._id);
+    const createRes = await candidate.post('/api/v1/applications').set('X-CSRF-Token', candCsrf).send({ jobId: job._id });
+    const applicationId = createRes.body.data.application._id;
+
+    const res = await recruiterAgent
+      .post(`/api/v1/applications/${applicationId}/decision`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ status: 'selected', notes: 'Great culture fit and strong technical skills.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.application.status).toBe('selected');
+    expect(res.body.data.application.decision.status).toBe('selected');
+    expect(res.body.data.application.decision.madeBy.name).toBe(recruiter.name);
+    expect(res.body.data.application.decision.notes).toBe('Great culture fit and strong technical skills.');
+    expect(res.body.data.application.statusHistory.at(-1).status).toBe('selected');
+  });
+
+  it('blocks a recruiter from a different org from deciding on the application', async () => {
+    const { user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const { agent: candidate, csrfToken, user: candidateUser } = await createAndLoginUser('candidate');
+    await giveCandidateResume(candidateUser._id);
+    const createRes = await candidate.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: job._id });
+    const applicationId = createRes.body.data.application._id;
+
+    const otherOrg = await Organization.create({ name: 'Other Org' });
+    const { agent: otherRecruiter, csrfToken: otherCsrf } = await createAndLoginUser('recruiter', otherOrg._id);
+    const res = await otherRecruiter
+      .post(`/api/v1/applications/${applicationId}/decision`)
+      .set('X-CSRF-Token', otherCsrf)
+      .send({ status: 'rejected' });
+    expect(res.status).toBe(404);
+  });
+});

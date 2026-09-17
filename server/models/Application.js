@@ -30,6 +30,16 @@ const statusHistoryEntrySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const decisionSchema = new mongoose.Schema(
+  {
+    status: { type: String, enum: ['selected', 'rejected', 'on_hold'], required: true },
+    madeBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    madeAt: { type: Date, default: Date.now },
+    notes: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const applicationSchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
@@ -41,6 +51,7 @@ const applicationSchema = new mongoose.Schema(
     availability: { type: String, default: '' },
     status: { type: String, enum: APPLICATION_STATUSES, default: 'applied', index: true },
     statusHistory: { type: [statusHistoryEntrySchema], default: [] },
+    decision: { type: decisionSchema, default: null },
     appliedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
