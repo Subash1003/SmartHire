@@ -7,6 +7,7 @@ const FloatingInput = forwardRef(function FloatingInput(
 ) {
   const [visible, setVisible] = useState(false);
   const isPassword = type === 'password';
+  const isSearch = type === 'search';
   const effectiveType = isPassword ? (visible ? 'text' : 'password') : type;
 
   const inputClassName = [
@@ -26,17 +27,21 @@ const FloatingInput = forwardRef(function FloatingInput(
           id={id}
           ref={ref}
           type={effectiveType}
+          placeholder={isSearch ? label : undefined}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
+          aria-label={isSearch ? label : undefined}
           className={inputClassName}
           {...rest}
         />
 
         {Icon && <Icon size={16} className="form-field__icon" />}
 
-        <label htmlFor={id} className={`form-field__label ${error ? 'form-field__label--error' : ''}`}>
-          {label}
-        </label>
+        {!isSearch && (
+          <label htmlFor={id} className={`form-field__label ${error ? 'form-field__label--error' : ''}`}>
+            {label}
+          </label>
+        )}
 
         {isPassword && (
           <button
