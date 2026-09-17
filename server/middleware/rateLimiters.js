@@ -24,3 +24,13 @@ export const apiLimiter = rateLimit({
   handler: limitHandler,
   skip: () => isTestEnv,
 });
+
+// AI calls are the most expensive request this API makes — keep this tight.
+export const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: limitHandler,
+  skip: () => isTestEnv,
+});

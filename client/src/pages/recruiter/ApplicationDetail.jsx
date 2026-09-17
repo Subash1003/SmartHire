@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { applicationsApi } from '../../api/applicationsApi';
+import { aiApi } from '../../api/aiApi';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -48,6 +49,11 @@ export default function RecruiterApplicationDetail() {
   const [evaluations, setEvaluations] = useState([]);
   const [evaluationsStatus, setEvaluationsStatus] = useState('loading');
 
+  const [screening, setScreening] = useState(null);
+  const [screeningStatus, setScreeningStatus] = useState('loading');
+  const [screeningRunning, setScreeningRunning] = useState(false);
+  const [screeningError, setScreeningError] = useState('');
+
   const {
     register,
     handleSubmit,
@@ -87,12 +93,41 @@ export default function RecruiterApplicationDetail() {
       .catch(() => setEvaluationsStatus('error'));
   };
 
+  const loadScreening = () => {
+    setScreeningStatus('loading');
+    aiApi
+      .getScreening(id)
+      .then((res) => {
+        setScreening(res.data.data.screening);
+        setScreeningStatus('success');
+      })
+      .catch(() => {
+        setScreening(null);
+        setScreeningStatus('none');
+      });
+  };
+
   useEffect(() => {
     loadApplication();
     loadNotes();
     loadEvaluations();
+    loadScreening();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const handleRunScreening = async () => {
+    setScreeningError('');
+    setScreeningRunning(true);
+    try {
+      const res = await aiApi.runResumeScreen(id);
+      setScreening(res.data.data.screening);
+      setScreeningStatus('success');
+    } catch (err) {
+      setScreeningError(getApiErrorMessage(err, 'Unable to run AI screening.'));
+    } finally {
+      setScreeningRunning(false);
+    }
+  };
 
   const handleStatusUpdate = async () => {
     setStatusError('');
@@ -186,6 +221,66 @@ export default function RecruiterApplicationDetail() {
           </p>
         )}
       </div>
+
+      <section className="card card--padded card--shadow application-detail__status-card">
+        <h2 className="profile-page__section-title">AI-assisted candidate analysis</h2>
+        <p className="text-faint">
+          An AI-generated summary to help your review — it never makes the hiring decision. You remain responsible for
+          the outcome.
+        </p>
+
+        {screeningStatus === 'loading' && <p className="text-muted">Checking for an existing screening...</p>}
+
+        {(screeningStatus === 'none' || screeningStatus === 'error') && (
+          <Button variant="secondary" onClick={handleRunScreening} disabled={screeningRunning}>
+            {screeningRunning ? 'Running screening...' : 'Run AI screening'}
+          </Button>
+        )}
+
+        {screeningStatus === 'success' && screening && (
+          <div className="application-detail__body">
+            <p>
+              <span className="application-detail__label">Match score:</span> {screening.matchScore}/100
+            </p>
+            <p>
+              <span className="application-detail__label">Experience match:</span> {screening.experienceMatch}/100 &middot;{' '}
+              <span className="application-detail__label">Education match:</span> {screening.educationMatch}/100
+            </p>
+            {screening.matchedSkills?.length > 0 && (
+              <div>
+                <span className="application-detail__label">Matched skills:</span>
+                <div className="job-detail__skills">
+                  {screening.matchedSkills.map((skill) => (
+                    <Badge key={skill} variant="success">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {screening.missingSkills?.length > 0 && (
+              <div>
+                <span className="application-detail__label">Missing skills:</span>
+                <div className="job-detail__skills">
+                  {screening.missingSkills.map((skill) => (
+                    <Badge key={skill} variant="warning">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p>
+              <span className="application-detail__label">Summary:</span> {screening.summary}
+            </p>
+            <Button variant="secondary" onClick={handleRunScreening} disabled={screeningRunning}>
+              {screeningRunning ? 'Re-running...' : 'Re-run screening'}
+            </Button>
+          </div>
+        )}
+
+        {screeningError && <p className="text-error">{screeningError}</p>}
+      </section>
 
       <section className="card card--padded card--shadow application-detail__status-card">
         <h2 className="profile-page__section-title">Update status</h2>

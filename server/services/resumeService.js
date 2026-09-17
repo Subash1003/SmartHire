@@ -1,4 +1,6 @@
 import { fileTypeFromBuffer } from 'file-type';
+import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
 import cloudinary, { isCloudinaryConfigured } from '../config/cloudinary.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -54,4 +56,38 @@ export async function uploadResume({ buffer, originalname, size }, { userId, pre
 export async function deleteResume(publicId) {
   if (!publicId) return;
   await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+}
+
+// Extracted on demand (never persisted) so AI screening can read a resume's
+// text without keeping a standing plaintext copy in the database.
+export async function extractText(url, fileType) {
+  let response;
+  try {
+    response = await fetch(url);
+  } catch {
+    throw new ApiError(502, 'Unable to download the resume for screening.');
+  }
+
+  if (!response.ok) {
+    throw new ApiError(502, 'Unable to download the resume for screening.');
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+
+  try {
+    if (fileType === 'application/pdf') {
+      const parser = new PDFParse({ data: buffer });
+      try {
+        const result = await parser.getText();
+        return result.text;
+      } finally {
+        await parser.destroy();
+      }
+    }
+
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
+  } catch {
+    throw new ApiError(422, 'Unable to read text from this resume file.');
+  }
 }
