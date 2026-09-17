@@ -6,6 +6,7 @@ import userRoutes from './users.js';
 import candidateRoutes from './candidates.js';
 import jobRoutes from './jobs.js';
 import applicationRoutes from './applications.js';
+import interviewRoutes from './interviews.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/users', userRoutes);
 router.use('/candidates', candidateRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/applications', applicationRoutes);
+router.use('/interviews', interviewRoutes);
 
 export default router;

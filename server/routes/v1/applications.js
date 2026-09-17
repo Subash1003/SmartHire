@@ -18,7 +18,7 @@ router.use(requireAuth);
 
 router.post('/', requireRole('candidate'), verifyCsrf, validate(createApplicationSchema), applicationController.createApplication);
 router.get('/', requireRole('candidate', 'recruiter', 'admin'), validateQuery(listApplicationsQuerySchema), applicationController.listApplications);
-router.get('/:id', requireRole('candidate', 'recruiter', 'admin'), applicationController.getApplication);
+router.get('/:id', requireRole('candidate', 'recruiter', 'admin', 'interviewer'), applicationController.getApplication);
 router.patch(
   '/:id/status',
   requireRole('recruiter', 'admin'),

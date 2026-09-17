@@ -22,7 +22,11 @@ import RecruiterJobDetail from '../pages/recruiter/JobDetail';
 import RecruiterApplications from '../pages/recruiter/Applications';
 import RecruiterApplicationDetail from '../pages/recruiter/ApplicationDetail';
 import RecruiterPipeline from '../pages/recruiter/Pipeline';
+import RecruiterInterviews from '../pages/recruiter/Interviews';
+import RecruiterInterviewForm from '../pages/recruiter/InterviewForm';
 import InterviewerDashboard from '../pages/interviewer/Dashboard';
+import InterviewerInterviews from '../pages/interviewer/Interviews';
+import InterviewerInterviewDetail from '../pages/interviewer/InterviewDetail';
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers from '../pages/admin/Users';
 import AdminSettings from '../pages/admin/Settings';
@@ -58,9 +62,14 @@ export default function AppRoutes() {
             <Route path="/recruiter/applications" element={<RecruiterApplications />} />
             <Route path="/recruiter/applications/:id" element={<RecruiterApplicationDetail />} />
             <Route path="/recruiter/candidates" element={<RecruiterPipeline />} />
+            <Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
+            <Route path="/recruiter/interviews/schedule" element={<RecruiterInterviewForm />} />
+            <Route path="/recruiter/interviews/:id/edit" element={<RecruiterInterviewForm />} />
           </Route>
           <Route element={<RoleRoute allow={['interviewer']} />}>
             <Route path="/interviewer/dashboard" element={<InterviewerDashboard />} />
+            <Route path="/interviewer/interviews" element={<InterviewerInterviews />} />
+            <Route path="/interviewer/interviews/:id" element={<InterviewerInterviewDetail />} />
           </Route>
           <Route element={<RoleRoute allow={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

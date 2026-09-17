@@ -99,6 +99,9 @@ export default function RecruiterApplicationDetail() {
       <div className="application-detail__header">
         <h1 className="dashboard-page__title">{application.candidateId?.name}</h1>
         <Badge variant={STATUS_VARIANT[application.status]}>{STATUS_LABELS[application.status]}</Badge>
+        <Link to={`/recruiter/interviews/schedule?applicationId=${application._id}`} className="application-detail__header-action">
+          <Button variant="secondary">Schedule interview</Button>
+        </Link>
       </div>
       <p className="text-muted">{application.candidateId?.email}</p>
 

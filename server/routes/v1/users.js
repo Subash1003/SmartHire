@@ -13,12 +13,14 @@ import {
 
 const router = Router();
 
-router.use(requireAuth, requireRole('admin'));
+router.use(requireAuth);
 
-router.get('/', validateQuery(listUsersQuerySchema), userController.listUsers);
-router.post('/', verifyCsrf, validate(createUserSchema), userController.createUser);
-router.get('/:id', userController.getUser);
-router.put('/:id', verifyCsrf, validate(updateUserSchema), userController.updateUser);
-router.patch('/:id/status', verifyCsrf, validate(updateUserStatusSchema), userController.updateUserStatus);
+// Recruiters can read the org's staff list (needed to assign interviewers
+// when scheduling); only admins can create/edit/deactivate users.
+router.get('/', requireRole('admin', 'recruiter'), validateQuery(listUsersQuerySchema), userController.listUsers);
+router.get('/:id', requireRole('admin', 'recruiter'), userController.getUser);
+router.post('/', requireRole('admin'), verifyCsrf, validate(createUserSchema), userController.createUser);
+router.put('/:id', requireRole('admin'), verifyCsrf, validate(updateUserSchema), userController.updateUser);
+router.patch('/:id/status', requireRole('admin'), verifyCsrf, validate(updateUserStatusSchema), userController.updateUserStatus);
 
 export default router;

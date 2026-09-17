@@ -108,6 +108,17 @@ describe('GET /api/v1/users', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.every((u) => u.role === 'interviewer')).toBe(true);
   });
+
+  it('allows a recruiter to read the list (needed to assign interviewers)', async () => {
+    const { agent } = await createAndLoginUser('recruiter');
+    const { user: interviewer } = await createAndLoginUser('interviewer');
+
+    const listRes = await agent.get('/api/v1/users?role=interviewer');
+    expect(listRes.status).toBe(200);
+
+    const getRes = await agent.get(`/api/v1/users/${interviewer._id}`);
+    expect(getRes.status).toBe(200);
+  });
 });
 
 describe('PATCH /api/v1/users/:id/status', () => {

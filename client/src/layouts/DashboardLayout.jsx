@@ -13,8 +13,12 @@ const NAV_ITEMS = {
     { to: '/recruiter/jobs', label: 'Jobs' },
     { to: '/recruiter/applications', label: 'Applications' },
     { to: '/recruiter/candidates', label: 'Pipeline' },
+    { to: '/recruiter/interviews', label: 'Interviews' },
   ],
-  interviewer: [{ to: '/interviewer/dashboard', label: 'Dashboard' }],
+  interviewer: [
+    { to: '/interviewer/dashboard', label: 'Dashboard' },
+    { to: '/interviewer/interviews', label: 'Interviews' },
+  ],
   candidate: [
     { to: '/candidate/dashboard', label: 'Dashboard' },
     { to: '/candidate/applications', label: 'My Applications' },

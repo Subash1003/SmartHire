@@ -1336,8 +1336,13 @@ img {
 .application-detail__header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-4);
+}
+
+.application-detail__header-action {
+  margin-left: auto;
 }
 
 .application-detail__applied-on {

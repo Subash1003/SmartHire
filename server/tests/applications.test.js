@@ -11,6 +11,7 @@ let User;
 let Job;
 let Application;
 let CandidateProfile;
+let Interview;
 let organization;
 
 beforeAll(async () => {
@@ -20,6 +21,7 @@ beforeAll(async () => {
   ({ default: Job } = await import('../models/Job.js'));
   ({ default: Application } = await import('../models/Application.js'));
   ({ default: CandidateProfile } = await import('../models/CandidateProfile.js'));
+  ({ default: Interview } = await import('../models/Interview.js'));
 });
 
 beforeEach(async () => {
@@ -28,6 +30,7 @@ beforeEach(async () => {
   await Job.deleteMany({});
   await Application.deleteMany({});
   await CandidateProfile.deleteMany({});
+  await Interview.deleteMany({});
   organization = await Organization.create({ name: 'Acme Corp' });
 });
 
@@ -337,5 +340,53 @@ describe('GET /api/v1/applications search & sort', () => {
     const res = await recruiterAgent.get('/api/v1/applications?search=Searchable');
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(0);
+  });
+});
+
+describe('Interviewer access to an application', () => {
+  it('allows an interviewer to view an application only once assigned an interview for it', async () => {
+    const { user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+
+    const { agent: candidate, csrfToken, user: candidateUser } = await createAndLoginUser('candidate');
+    await giveCandidateResume(candidateUser._id);
+    const createRes = await candidate.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: job._id });
+    const applicationId = createRes.body.data.application._id;
+
+    const { agent: interviewerAgent, user: interviewer } = await createAndLoginUser('interviewer');
+
+    const before = await interviewerAgent.get(`/api/v1/applications/${applicationId}`);
+    expect(before.status).toBe(404);
+
+    await Interview.create({
+      organizationId: organization._id,
+      applicationId,
+      candidateId: candidateUser._id,
+      jobId: job._id,
+      interviewerId: interviewer._id,
+      type: 'technical',
+      date: new Date(),
+      startTime: new Date(),
+      endTime: new Date(Date.now() + 30 * 60 * 1000),
+      createdBy: recruiter._id,
+    });
+
+    const after = await interviewerAgent.get(`/api/v1/applications/${applicationId}`);
+    expect(after.status).toBe(200);
+  });
+
+  it('never allows an interviewer from a different org to view the application', async () => {
+    const { user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const { agent: candidate, csrfToken, user: candidateUser } = await createAndLoginUser('candidate');
+    await giveCandidateResume(candidateUser._id);
+    const createRes = await candidate.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: job._id });
+    const applicationId = createRes.body.data.application._id;
+
+    const otherOrg = await Organization.create({ name: 'Other Org' });
+    const { agent: otherInterviewerAgent } = await createAndLoginUser('interviewer', otherOrg._id);
+
+    const res = await otherInterviewerAgent.get(`/api/v1/applications/${applicationId}`);
+    expect(res.status).toBe(404);
   });
 });

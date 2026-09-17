@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Application from '../models/Application.js';
 import Job from '../models/Job.js';
 import CandidateProfile from '../models/CandidateProfile.js';
+import Interview from '../models/Interview.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/apiResponse.js';
@@ -175,9 +176,16 @@ export const getApplication = asyncHandler(async (req, res) => {
 
   const isOwner = application.candidateId._id.equals(req.user._id);
   const isOrgStaff =
-    req.user.role !== 'candidate' && application.organizationId.equals(req.user.organizationId);
+    ['recruiter', 'admin'].includes(req.user.role) && application.organizationId.equals(req.user.organizationId);
 
-  if (!isOwner && !isOrgStaff) {
+  let isAssignedInterviewer = false;
+  if (req.user.role === 'interviewer' && application.organizationId.equals(req.user.organizationId)) {
+    isAssignedInterviewer = Boolean(
+      await Interview.exists({ applicationId: application._id, interviewerId: req.user._id })
+    );
+  }
+
+  if (!isOwner && !isOrgStaff && !isAssignedInterviewer) {
     throw new ApiError(404, 'Application not found');
   }
 
