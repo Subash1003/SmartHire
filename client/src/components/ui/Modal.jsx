@@ -20,7 +20,7 @@ export default function Modal({ open, onClose, title, children }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -28,18 +28,13 @@ export default function Modal({ open, onClose, title, children }) {
         aria-labelledby="modal-title"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl focus:outline-none"
+        className="modal"
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+        <div className="modal__header">
+          <h2 id="modal-title" className="modal__title">
             {title}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
-          >
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="modal__close">
             <X size={18} />
           </button>
         </div>

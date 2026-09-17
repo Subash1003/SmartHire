@@ -970,7 +970,10 @@ Use:
 - Vite
 - React Router
 - Axios
-- Tailwind CSS
+- Plain CSS: a single global stylesheet (src/styles/global.css) using CSS
+  custom properties for design tokens, not Tailwind CSS — switched from
+  Tailwind so styles are directly readable/editable without needing
+  Tailwind knowledge.
 - Recharts
 - React Hook Form where appropriate
 - Zod or another validation library where appropriate

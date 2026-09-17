@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { organizationsApi } from '../../api/organizationsApi';
 import { updateOrganizationSchema } from '../../validators/organization.schema';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
-import Input from '../../components/ui/Input';
-import TextArea from '../../components/ui/TextArea';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import Button from '../../components/ui/Button';
 
 export default function AdminSettings() {
@@ -51,39 +51,46 @@ export default function AdminSettings() {
   };
 
   if (status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading organization settings...</p>;
+    return <p className="text-muted">Loading organization settings...</p>;
   }
 
   if (status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load organization settings. Please try again.</p>;
+    return <p className="text-error">Unable to load organization settings. Please try again.</p>;
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-gray-900">Organization settings</h1>
+    <div className="form-page">
+      <h1 className="dashboard-page__title">Organization settings</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
-        <Input id="name" label="Organization name" error={errors.name?.message} {...register('name')} />
-        <Input id="logo" label="Logo URL" error={errors.logo?.message} {...register('logo')} />
-        <TextArea id="description" label="Description" error={errors.description?.message} {...register('description')} />
-        <Input id="website" label="Website" error={errors.website?.message} {...register('website')} />
-        <Input id="industry" label="Industry" error={errors.industry?.message} {...register('industry')} />
-        <Input id="location" label="Location" error={errors.location?.message} {...register('location')} />
-        <Input
-          id="contactEmail"
-          label="Contact email"
-          type="email"
-          error={errors.contactEmail?.message}
-          {...register('contactEmail')}
-        />
+      <div className="card card--padded card--shadow form-page__card">
+        <form onSubmit={handleSubmit(onSubmit)} className="stack stack--gap-4" noValidate>
+          <FloatingInput id="name" label="Organization name" error={errors.name?.message} {...register('name')} />
+          <FloatingInput id="logo" label="Logo URL" error={errors.logo?.message} {...register('logo')} />
+          <FloatingTextarea
+            id="description"
+            label="Description"
+            error={errors.description?.message}
+            {...register('description')}
+          />
+          <FloatingInput id="website" label="Website" error={errors.website?.message} {...register('website')} />
+          <FloatingInput id="industry" label="Industry" error={errors.industry?.message} {...register('industry')} />
+          <FloatingInput id="location" label="Location" error={errors.location?.message} {...register('location')} />
+          <FloatingInput
+            id="contactEmail"
+            label="Contact email"
+            type="email"
+            error={errors.contactEmail?.message}
+            {...register('contactEmail')}
+          />
 
-        {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-        {saved && <p className="text-sm text-green-600">Settings saved.</p>}
+          {serverError && <p className="text-error">{serverError}</p>}
+          {saved && <p className="text-success">Settings saved.</p>}
 
-        <Button type="submit" disabled={isSubmitting} className="w-fit">
-          {isSubmitting ? 'Saving...' : 'Save changes'}
-        </Button>
-      </form>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save changes'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

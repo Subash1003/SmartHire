@@ -6,43 +6,41 @@ export default function PublicLayout() {
   const { user, status } = useAuth();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link to="/" className="text-lg font-semibold text-gray-900">
+    <div className="site">
+      <header className="site-header">
+        <div className="site-header__inner">
+          <Link to="/" className="site-header__logo">
             SmartHire
           </Link>
 
-          <nav className="flex items-center gap-4 text-sm">
-            <Link to="/jobs" className="text-gray-700 hover:underline">
+          <nav className="site-nav">
+            <Link to="/jobs" className="site-nav__link">
               Browse jobs
             </Link>
             {status === 'authenticated' && user ? (
-              <Link to={roleHomePath(user.role)} className="font-medium text-brand-600 hover:underline">
+              <Link to={roleHomePath(user.role)} className="site-nav__cta">
                 Go to dashboard
               </Link>
             ) : (
-              <>
-                <Link to="/login" className="text-gray-700 hover:underline">
+              <div className="cluster cluster--gap-3">
+                <Link to="/login" className="site-nav__link">
                   Log in
                 </Link>
-                <Link to="/register" className="text-gray-700 hover:underline">
+                <Link to="/register" className="site-nav__cta">
                   Sign up
                 </Link>
-              </>
+              </div>
             )}
           </nav>
         </div>
       </header>
 
-      <main className="flex-1">
+      <main className="site-main">
         <Outlet />
       </main>
 
-      <footer className="border-t border-gray-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-gray-500">
-          &copy; {new Date().getFullYear()} SmartHire
-        </div>
+      <footer className="site-footer">
+        <div className="site-footer__inner">&copy; {new Date().getFullYear()} SmartHire</div>
       </footer>
     </div>
   );

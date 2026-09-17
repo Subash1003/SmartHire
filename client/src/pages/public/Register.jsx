@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { registerSchema } from '../../validators/auth.schema';
 import { useAuth } from '../../hooks/useAuth';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
-import Input from '../../components/ui/Input';
+import FloatingInput from '../../components/ui/FloatingInput';
 import Button from '../../components/ui/Button';
 
 const ORGANIZATION_ID = import.meta.env.VITE_ORGANIZATION_ID;
@@ -32,38 +32,46 @@ export default function Register() {
   };
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-6 px-4 py-16">
-      <h1 className="text-2xl font-semibold text-gray-900">Create a candidate account</h1>
+    <div className="auth-page">
+      <h1 className="auth-page__title">Create a candidate account</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-        <Input id="name" label="Full name" autoComplete="name" error={errors.name?.message} {...register('name')} />
-        <Input
-          id="email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-        <Input
-          id="password"
-          label="Password"
-          type="password"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register('password')}
-        />
+      <div className="auth-card">
+        <form onSubmit={handleSubmit(onSubmit)} className="stack stack--gap-4" noValidate>
+          <FloatingInput
+            id="name"
+            label="Full name"
+            autoComplete="name"
+            error={errors.name?.message}
+            {...register('name')}
+          />
+          <FloatingInput
+            id="email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            error={errors.email?.message}
+            {...register('email')}
+          />
+          <FloatingInput
+            id="password"
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            error={errors.password?.message}
+            {...register('password')}
+          />
 
-        {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+          {serverError && <p className="text-error">{serverError}</p>}
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? 'Creating account...' : 'Create account'}
-        </Button>
-      </form>
+          <Button type="submit" disabled={isSubmitting} className="btn--block">
+            {isSubmitting ? 'Creating account...' : 'Create account'}
+          </Button>
+        </form>
+      </div>
 
-      <p className="text-sm text-gray-600">
+      <p className="text-muted">
         Already have an account?{' '}
-        <Link to="/login" className="hover:underline">
+        <Link to="/login" className="link-accent">
           Log in
         </Link>
       </p>

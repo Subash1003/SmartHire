@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { jobsApi } from '../../api/jobsApi';
 import { useDebounce } from '../../hooks/useDebounce';
 import { EMPLOYMENT_TYPE_OPTIONS, WORK_MODE_OPTIONS } from '../../validators/job.schema';
-import Select from '../../components/ui/Select';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingSelect from '../../components/ui/FloatingSelect';
 import Pagination from '../../components/ui/Pagination';
 import EmptyState from '../../components/ui/EmptyState';
 import Badge from '../../components/ui/Badge';
@@ -41,68 +43,78 @@ export default function Jobs() {
   }, [loadJobs]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-semibold text-gray-900">Open positions</h1>
+    <div className="page page--md">
+      <h1 className="page__title">Open positions</h1>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <input
-          type="search"
-          placeholder="Search jobs by title or skill"
-          value={search}
-          onChange={(e) => {
-            setPage(1);
-            setSearch(e.target.value);
-          }}
-          className="min-w-64 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
-        <Select
-          id="employmentType"
-          value={employmentType}
-          onChange={(e) => {
-            setPage(1);
-            setEmploymentType(e.target.value);
-          }}
-          options={EMPLOYMENT_FILTER_OPTIONS}
-        />
-        <Select
-          id="workMode"
-          value={workMode}
-          onChange={(e) => {
-            setPage(1);
-            setWorkMode(e.target.value);
-          }}
-          options={WORK_MODE_FILTER_OPTIONS}
-        />
+      <div className="job-filters">
+        <div className="job-filters__search">
+          <FloatingInput
+            id="jobSearch"
+            label="Search jobs by title or skill"
+            type="search"
+            icon={Search}
+            labelBg="muted"
+            value={search}
+            onChange={(e) => {
+              setPage(1);
+              setSearch(e.target.value);
+            }}
+          />
+        </div>
+        <div className="job-filters__select">
+          <FloatingSelect
+            id="employmentType"
+            label="Employment type"
+            labelBg="muted"
+            value={employmentType}
+            onChange={(e) => {
+              setPage(1);
+              setEmploymentType(e.target.value);
+            }}
+            options={EMPLOYMENT_FILTER_OPTIONS}
+          />
+        </div>
+        <div className="job-filters__select">
+          <FloatingSelect
+            id="workMode"
+            label="Work mode"
+            labelBg="muted"
+            value={workMode}
+            onChange={(e) => {
+              setPage(1);
+              setWorkMode(e.target.value);
+            }}
+            options={WORK_MODE_FILTER_OPTIONS}
+          />
+        </div>
       </div>
 
-      <div className="mt-6 rounded-lg border border-gray-200 bg-white">
+      <div className="card job-list">
         {state.status === 'loading' && (
-          <div className="animate-pulse space-y-3 p-6">
+          <div className="table-skeleton">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 rounded bg-gray-100" />
+              <div key={i} className="job-list__skeleton-row" />
             ))}
           </div>
         )}
 
-        {state.status === 'error' && (
-          <p className="p-8 text-center text-sm text-red-600">Unable to load jobs. Please try again.</p>
-        )}
+        {state.status === 'error' && <p className="job-list__error">Unable to load jobs. Please try again.</p>}
 
         {state.status === 'success' && state.jobs.length === 0 && (
           <EmptyState title="No jobs found" description="Try adjusting your search or filters." />
         )}
 
         {state.status === 'success' && state.jobs.length > 0 && (
-          <ul className="divide-y divide-gray-100">
+          <ul className="job-list__items">
             {state.jobs.map((job) => (
-              <li key={job._id} className="p-4 hover:bg-gray-50">
-                <Link to={`/jobs/${job._id}`} className="flex flex-col gap-1">
-                  <span className="font-medium text-gray-900">{job.title}</span>
-                  <span className="text-sm text-gray-600">
+              <li key={job._id} className="job-list__item">
+                <Link to={`/jobs/${job._id}`} className="job-list__item-link">
+                  <span className="job-list__item-title">{job.title}</span>
+                  <span className="job-list__item-meta">
                     {job.location || 'Location not specified'} &middot; <span className="capitalize">{job.workMode}</span> &middot;{' '}
                     <span className="capitalize">{job.employmentType.replace('-', ' ')}</span>
                   </span>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="job-list__item-skills">
                     {(job.requiredSkills || []).slice(0, 5).map((skill) => (
                       <Badge key={skill} variant="brand">
                         {skill}

@@ -5,9 +5,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { jobsApi } from '../../api/jobsApi';
 import { jobFormSchema, toJobPayload, fromJob, EMPLOYMENT_TYPE_OPTIONS, WORK_MODE_OPTIONS } from '../../validators/job.schema';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
-import Input from '../../components/ui/Input';
-import TextArea from '../../components/ui/TextArea';
-import Select from '../../components/ui/Select';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingTextarea from '../../components/ui/FloatingTextarea';
+import FloatingSelect from '../../components/ui/FloatingSelect';
 import Button from '../../components/ui/Button';
 
 export default function JobForm() {
@@ -55,74 +55,100 @@ export default function JobForm() {
   };
 
   if (status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading job...</p>;
+    return <p className="text-muted">Loading job...</p>;
   }
 
   if (status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load this job. Please try again.</p>;
+    return <p className="text-error">Unable to load this job. Please try again.</p>;
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-gray-900">{isEditing ? 'Edit job' : 'Create job'}</h1>
+    <div className="form-page">
+      <h1 className="dashboard-page__title">{isEditing ? 'Edit job' : 'Create job'}</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
-        <Input id="title" label="Title" error={errors.title?.message} {...register('title')} />
-        <Input id="department" label="Department" error={errors.department?.message} {...register('department')} />
-        <TextArea id="description" label="Description" rows={6} error={errors.description?.message} {...register('description')} />
-        <Input
-          id="responsibilitiesText"
-          label="Responsibilities (comma-separated)"
-          error={errors.responsibilitiesText?.message}
-          {...register('responsibilitiesText')}
-        />
-        <Input
-          id="requiredSkillsText"
-          label="Required skills (comma-separated)"
-          error={errors.requiredSkillsText?.message}
-          {...register('requiredSkillsText')}
-        />
-        <Input
-          id="preferredSkillsText"
-          label="Preferred skills (comma-separated)"
-          error={errors.preferredSkillsText?.message}
-          {...register('preferredSkillsText')}
-        />
-        <Input id="education" label="Education" error={errors.education?.message} {...register('education')} />
-        <Input id="experience" label="Experience" error={errors.experience?.message} {...register('experience')} />
-
-        <div className="grid grid-cols-2 gap-4">
-          <Select
-            id="employmentType"
-            label="Employment type"
-            options={EMPLOYMENT_TYPE_OPTIONS}
-            error={errors.employmentType?.message}
-            {...register('employmentType')}
+      <div className="card card--padded card--shadow form-page__card">
+        <form onSubmit={handleSubmit(onSubmit)} className="stack stack--gap-4" noValidate>
+          <FloatingInput id="title" label="Title" error={errors.title?.message} {...register('title')} />
+          <FloatingInput id="department" label="Department" error={errors.department?.message} {...register('department')} />
+          <FloatingTextarea
+            id="description"
+            label="Description"
+            rows={6}
+            error={errors.description?.message}
+            {...register('description')}
           />
-          <Select
-            id="workMode"
-            label="Work mode"
-            options={WORK_MODE_OPTIONS}
-            error={errors.workMode?.message}
-            {...register('workMode')}
+          <FloatingInput
+            id="responsibilitiesText"
+            label="Responsibilities (comma-separated)"
+            error={errors.responsibilitiesText?.message}
+            {...register('responsibilitiesText')}
           />
-        </div>
+          <FloatingInput
+            id="requiredSkillsText"
+            label="Required skills (comma-separated)"
+            error={errors.requiredSkillsText?.message}
+            {...register('requiredSkillsText')}
+          />
+          <FloatingInput
+            id="preferredSkillsText"
+            label="Preferred skills (comma-separated)"
+            error={errors.preferredSkillsText?.message}
+            {...register('preferredSkillsText')}
+          />
+          <FloatingInput id="education" label="Education" error={errors.education?.message} {...register('education')} />
+          <FloatingInput id="experience" label="Experience" error={errors.experience?.message} {...register('experience')} />
 
-        <Input id="location" label="Location" error={errors.location?.message} {...register('location')} />
+          <div className="form-grid-2">
+            <FloatingSelect
+              id="employmentType"
+              label="Employment type"
+              options={EMPLOYMENT_TYPE_OPTIONS}
+              error={errors.employmentType?.message}
+              {...register('employmentType')}
+            />
+            <FloatingSelect
+              id="workMode"
+              label="Work mode"
+              options={WORK_MODE_OPTIONS}
+              error={errors.workMode?.message}
+              {...register('workMode')}
+            />
+          </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Input id="salaryMin" label="Salary min" type="number" error={errors.salaryMin?.message} {...register('salaryMin')} />
-          <Input id="salaryMax" label="Salary max" type="number" error={errors.salaryMax?.message} {...register('salaryMax')} />
-        </div>
+          <FloatingInput id="location" label="Location" error={errors.location?.message} {...register('location')} />
 
-        <Input id="deadline" label="Application deadline" type="date" error={errors.deadline?.message} {...register('deadline')} />
+          <div className="form-grid-2">
+            <FloatingInput
+              id="salaryMin"
+              label="Salary min"
+              type="number"
+              error={errors.salaryMin?.message}
+              {...register('salaryMin')}
+            />
+            <FloatingInput
+              id="salaryMax"
+              label="Salary max"
+              type="number"
+              error={errors.salaryMax?.message}
+              {...register('salaryMax')}
+            />
+          </div>
 
-        {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+          <FloatingInput
+            id="deadline"
+            label="Application deadline"
+            type="date"
+            error={errors.deadline?.message}
+            {...register('deadline')}
+          />
 
-        <Button type="submit" disabled={isSubmitting} className="w-fit">
-          {isSubmitting ? 'Saving...' : isEditing ? 'Save changes' : 'Create job'}
-        </Button>
-      </form>
+          {serverError && <p className="text-error">{serverError}</p>}
+
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : isEditing ? 'Save changes' : 'Create job'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

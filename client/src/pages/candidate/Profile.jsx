@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { candidateProfileApi } from '../../api/candidateProfileApi';
 import { updateCandidateProfileSchema } from '../../validators/candidateProfile.schema';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
-import Input from '../../components/ui/Input';
-import TextArea from '../../components/ui/TextArea';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import Button from '../../components/ui/Button';
 import FileUpload from '../../components/ui/FileUpload';
 
@@ -77,64 +77,68 @@ export default function CandidateProfile() {
   };
 
   if (status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading your profile...</p>;
+    return <p className="text-muted">Loading your profile...</p>;
   }
 
   if (status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load your profile. Please try again.</p>;
+    return <p className="text-error">Unable to load your profile. Please try again.</p>;
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-gray-900">Your profile</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        Experience and education entries are added in a later step.
-      </p>
+    <div className="form-page">
+      <h1 className="dashboard-page__title">Your profile</h1>
+      <p className="text-muted profile-page__intro">Experience and education entries are added in a later step.</p>
 
-      <section className="mt-6 rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-gray-900">Resume</h2>
-        {resume?.url ? (
-          <p className="mt-1 text-sm text-gray-600">
+      <section className="card card--padded card--shadow profile-page__section">
+        <h2 className="profile-page__section-title">Resume</h2>
+        {resume?.url && (
+          <p className="text-muted profile-page__resume-current">
             Current file:{' '}
-            <a href={resume.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+            <a href={resume.url} target="_blank" rel="noreferrer" className="link-accent">
               {resume.fileName}
             </a>
           </p>
-        ) : (
-          <p className="mt-1 text-sm text-gray-500">No resume uploaded yet. You will need one to apply for jobs.</p>
         )}
-        <div className="mt-3">
-          <FileUpload onSelect={handleResumeSelect} uploading={resumeUploading} error={resumeError} />
+        <div className="profile-page__resume-upload">
+          <FileUpload
+            onSelect={handleResumeSelect}
+            uploading={resumeUploading}
+            error={resumeError}
+            currentFileName={resume?.fileName}
+          />
         </div>
+        {!resume?.url && <p className="text-faint profile-page__resume-hint">You will need a resume on file to apply for jobs.</p>}
       </section>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
-        <Input id="phone" label="Phone" error={errors.phone?.message} {...register('phone')} />
-        <Input id="location" label="Location" error={errors.location?.message} {...register('location')} />
-        <TextArea
-          id="summary"
-          label="Professional summary"
-          error={errors.summary?.message}
-          {...register('summary')}
-        />
-        <Input
-          id="skillsText"
-          label="Skills (comma-separated)"
-          placeholder="React, Node.js, MongoDB"
-          error={errors.skillsText?.message}
-          {...register('skillsText')}
-        />
-        <Input id="portfolio" label="Portfolio URL" error={errors.portfolio?.message} {...register('portfolio')} />
-        <Input id="github" label="GitHub URL" error={errors.github?.message} {...register('github')} />
-        <Input id="linkedin" label="LinkedIn URL" error={errors.linkedin?.message} {...register('linkedin')} />
+      <div className="card card--padded card--shadow form-page__card">
+        <form onSubmit={handleSubmit(onSubmit)} className="stack stack--gap-4" noValidate>
+          <FloatingInput id="phone" label="Phone" error={errors.phone?.message} {...register('phone')} />
+          <FloatingInput id="location" label="Location" error={errors.location?.message} {...register('location')} />
+          <FloatingTextarea
+            id="summary"
+            label="Professional summary"
+            error={errors.summary?.message}
+            {...register('summary')}
+          />
+          <FloatingInput
+            id="skillsText"
+            label="Skills (comma-separated)"
+            placeholder="React, Node.js, MongoDB"
+            error={errors.skillsText?.message}
+            {...register('skillsText')}
+          />
+          <FloatingInput id="portfolio" label="Portfolio URL" error={errors.portfolio?.message} {...register('portfolio')} />
+          <FloatingInput id="github" label="GitHub URL" error={errors.github?.message} {...register('github')} />
+          <FloatingInput id="linkedin" label="LinkedIn URL" error={errors.linkedin?.message} {...register('linkedin')} />
 
-        {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-        {saved && <p className="text-sm text-green-600">Profile saved.</p>}
+          {serverError && <p className="text-error">{serverError}</p>}
+          {saved && <p className="text-success">Profile saved.</p>}
 
-        <Button type="submit" disabled={isSubmitting} className="w-fit">
-          {isSubmitting ? 'Saving...' : 'Save profile'}
-        </Button>
-      </form>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save profile'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

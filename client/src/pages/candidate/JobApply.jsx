@@ -7,8 +7,8 @@ import { applicationsApi } from '../../api/applicationsApi';
 import { candidateProfileApi } from '../../api/candidateProfileApi';
 import { applyFormSchema } from '../../validators/application.schema';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
-import Input from '../../components/ui/Input';
-import TextArea from '../../components/ui/TextArea';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import Button from '../../components/ui/Button';
 
 export default function JobApply() {
@@ -46,20 +46,18 @@ export default function JobApply() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading...</p>;
+    return <p className="text-muted">Loading...</p>;
   }
 
   if (state.status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load this job. Please try again.</p>;
+    return <p className="text-error">Unable to load this job. Please try again.</p>;
   }
 
   if (!state.hasResume) {
     return (
-      <div className="max-w-md">
-        <p className="text-sm text-gray-700">
-          You need to upload a resume before applying to jobs.
-        </p>
-        <Link to="/candidate/profile" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
+      <div className="job-apply__no-resume">
+        <p className="text-muted">You need to upload a resume before applying to jobs.</p>
+        <Link to="/candidate/profile" className="text-muted link-accent job-apply__no-resume-link">
           Go to your profile to upload one
         </Link>
       </div>
@@ -67,38 +65,40 @@ export default function JobApply() {
   }
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-xl font-semibold text-gray-900">Apply to {state.job.title}</h1>
+    <div className="job-apply">
+      <h1 className="dashboard-page__title">Apply to {state.job.title}</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
-        <TextArea
-          id="coverLetter"
-          label="Cover letter (optional)"
-          rows={6}
-          error={errors.coverLetter?.message}
-          {...register('coverLetter')}
-        />
-        <Input
-          id="expectedSalary"
-          label="Expected salary (optional)"
-          type="number"
-          error={errors.expectedSalary?.message}
-          {...register('expectedSalary')}
-        />
-        <Input
-          id="availability"
-          label="Availability (optional)"
-          placeholder="e.g. Immediate, 2 weeks notice"
-          error={errors.availability?.message}
-          {...register('availability')}
-        />
+      <div className="card card--padded card--shadow form-page__card">
+        <form onSubmit={handleSubmit(onSubmit)} className="stack stack--gap-4" noValidate>
+          <FloatingTextarea
+            id="coverLetter"
+            label="Cover letter (optional)"
+            rows={6}
+            error={errors.coverLetter?.message}
+            {...register('coverLetter')}
+          />
+          <FloatingInput
+            id="expectedSalary"
+            label="Expected salary (optional)"
+            type="number"
+            error={errors.expectedSalary?.message}
+            {...register('expectedSalary')}
+          />
+          <FloatingInput
+            id="availability"
+            label="Availability (optional)"
+            placeholder="e.g. Immediate, 2 weeks notice"
+            error={errors.availability?.message}
+            {...register('availability')}
+          />
 
-        {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+          {serverError && <p className="text-error">{serverError}</p>}
 
-        <Button type="submit" disabled={isSubmitting} className="w-fit">
-          {isSubmitting ? 'Submitting...' : 'Submit application'}
-        </Button>
-      </form>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit application'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

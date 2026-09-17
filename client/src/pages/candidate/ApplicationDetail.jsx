@@ -16,48 +16,50 @@ export default function CandidateApplicationDetail() {
   }, [id]);
 
   if (state.status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading application...</p>;
+    return <p className="text-muted">Loading application...</p>;
   }
 
   if (state.status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load this application. Please try again.</p>;
+    return <p className="text-error">Unable to load this application. Please try again.</p>;
   }
 
   const application = state.application;
 
   return (
-    <div className="max-w-2xl">
-      <Link to="/candidate/applications" className="text-sm text-brand-600 hover:underline">
+    <div className="form-page">
+      <Link to="/candidate/applications" className="link-accent">
         &larr; Back to applications
       </Link>
 
-      <div className="mt-4 flex items-center gap-3">
-        <h1 className="text-xl font-semibold text-gray-900">{application.jobId?.title}</h1>
+      <div className="application-detail__header">
+        <h1 className="dashboard-page__title">{application.jobId?.title}</h1>
         <Badge variant={STATUS_VARIANT[application.status]}>{STATUS_LABELS[application.status]}</Badge>
       </div>
 
-      <p className="mt-1 text-sm text-gray-600">Applied on {new Date(application.appliedAt).toLocaleDateString()}</p>
+      <p className="text-muted application-detail__applied-on">
+        Applied on {new Date(application.appliedAt).toLocaleDateString()}
+      </p>
 
-      <div className="mt-6 space-y-4 text-sm text-gray-700">
+      <div className="application-detail__body">
         {application.coverLetter && (
           <div>
-            <h2 className="font-semibold text-gray-900">Cover letter</h2>
-            <p className="mt-1 whitespace-pre-line">{application.coverLetter}</p>
+            <h2 className="application-detail__label">Cover letter</h2>
+            <p className="application-detail__cover-letter">{application.coverLetter}</p>
           </div>
         )}
         {application.expectedSalary && (
           <p>
-            <span className="font-semibold text-gray-900">Expected salary:</span> {application.expectedSalary}
+            <span className="application-detail__label">Expected salary:</span> {application.expectedSalary}
           </p>
         )}
         {application.availability && (
           <p>
-            <span className="font-semibold text-gray-900">Availability:</span> {application.availability}
+            <span className="application-detail__label">Availability:</span> {application.availability}
           </p>
         )}
         <p>
-          <span className="font-semibold text-gray-900">Resume submitted:</span>{' '}
-          <a href={application.resumeSnapshot.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+          <span className="application-detail__label">Resume submitted:</span>{' '}
+          <a href={application.resumeSnapshot.url} target="_blank" rel="noreferrer" className="link-accent">
             {application.resumeSnapshot.fileName}
           </a>
         </p>

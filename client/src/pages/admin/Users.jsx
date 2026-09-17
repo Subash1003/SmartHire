@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Search } from 'lucide-react';
 import { usersApi } from '../../api/usersApi';
 import { createUserSchema } from '../../validators/user.schema';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
@@ -9,8 +10,8 @@ import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import Input from '../../components/ui/Input';
-import Select from '../../components/ui/Select';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingSelect from '../../components/ui/FloatingSelect';
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -98,39 +99,47 @@ export default function AdminUsers() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Users</h1>
+    <div className="dashboard-page">
+      <div className="dashboard-page__header">
+        <h1 className="dashboard-page__title">Users</h1>
         <Button onClick={() => setModalOpen(true)}>Add user</Button>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="search"
-          placeholder="Search by name or email"
-          value={search}
-          onChange={(e) => {
-            setPage(1);
-            setSearch(e.target.value);
-          }}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
-        <Select
-          id="roleFilter"
-          value={roleFilter}
-          onChange={(e) => {
-            setPage(1);
-            setRoleFilter(e.target.value);
-          }}
-          options={ROLE_FILTER_OPTIONS}
-        />
+      <div className="filter-row">
+        <div className="filter-field--wide">
+          <FloatingInput
+            id="userSearch"
+            label="Search by name or email"
+            type="search"
+            icon={Search}
+            labelBg="muted"
+            value={search}
+            onChange={(e) => {
+              setPage(1);
+              setSearch(e.target.value);
+            }}
+          />
+        </div>
+        <div className="filter-field">
+          <FloatingSelect
+            id="roleFilter"
+            label="Role"
+            labelBg="muted"
+            value={roleFilter}
+            onChange={(e) => {
+              setPage(1);
+              setRoleFilter(e.target.value);
+            }}
+            options={ROLE_FILTER_OPTIONS}
+          />
+        </div>
       </div>
 
-      {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+      {actionError && <p className="text-error">{actionError}</p>}
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="card">
         {state.status === 'error' ? (
-          <p className="p-8 text-center text-sm text-red-600">Unable to load users. Please try again.</p>
+          <p className="table-error">Unable to load users. Please try again.</p>
         ) : (
           <>
             <DataTable columns={columns} rows={state.users} rowKey="_id" loading={state.status === 'loading'} />
@@ -142,21 +151,21 @@ export default function AdminUsers() {
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add user">
-        <form onSubmit={handleSubmit(onCreateUser)} className="flex flex-col gap-4" noValidate>
-          <Input id="name" label="Full name" error={errors.name?.message} {...register('name')} />
-          <Input id="email" label="Email" type="email" error={errors.email?.message} {...register('email')} />
-          <Input
+        <form onSubmit={handleSubmit(onCreateUser)} className="stack stack--gap-4" noValidate>
+          <FloatingInput id="name" label="Full name" error={errors.name?.message} {...register('name')} />
+          <FloatingInput id="email" label="Email" type="email" error={errors.email?.message} {...register('email')} />
+          <FloatingInput
             id="password"
             label="Temporary password"
             type="password"
             error={errors.password?.message}
             {...register('password')}
           />
-          <Select id="role" label="Role" options={ROLE_OPTIONS} error={errors.role?.message} {...register('role')} />
+          <FloatingSelect id="role" label="Role" options={ROLE_OPTIONS} error={errors.role?.message} {...register('role')} />
 
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <p className="text-error">{formError}</p>}
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
+          <Button type="submit" disabled={isSubmitting} className="btn--block">
             {isSubmitting ? 'Creating...' : 'Create user'}
           </Button>
         </form>

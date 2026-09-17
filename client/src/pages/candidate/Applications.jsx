@@ -29,7 +29,7 @@ export default function CandidateApplications() {
       key: 'job',
       header: 'Job',
       render: (row) => (
-        <Link to={`/candidate/applications/${row._id}`} className="font-medium text-brand-600 hover:underline">
+        <Link to={`/candidate/applications/${row._id}`} className="link-accent">
           {row.jobId?.title || 'Job no longer available'}
         </Link>
       ),
@@ -47,12 +47,12 @@ export default function CandidateApplications() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-900">Your applications</h1>
+    <div className="dashboard-page">
+      <h1 className="dashboard-page__title">Your applications</h1>
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="card">
         {state.status === 'error' ? (
-          <p className="p-8 text-center text-sm text-red-600">Unable to load applications. Please try again.</p>
+          <p className="table-error">Unable to load applications. Please try again.</p>
         ) : (
           <>
             <DataTable

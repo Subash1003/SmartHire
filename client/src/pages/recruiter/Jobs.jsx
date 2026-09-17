@@ -5,7 +5,7 @@ import DataTable from '../../components/ui/DataTable';
 import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import Select from '../../components/ui/Select';
+import FloatingSelect from '../../components/ui/FloatingSelect';
 
 const STATUS_VARIANT = {
   draft: 'neutral',
@@ -46,7 +46,7 @@ export default function RecruiterJobs() {
       key: 'title',
       header: 'Title',
       render: (row) => (
-        <Link to={`/recruiter/jobs/${row._id}`} className="font-medium text-brand-600 hover:underline">
+        <Link to={`/recruiter/jobs/${row._id}`} className="link-accent">
           {row.title}
         </Link>
       ),
@@ -65,28 +65,31 @@ export default function RecruiterJobs() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Jobs</h1>
+    <div className="dashboard-page">
+      <div className="dashboard-page__header">
+        <h1 className="dashboard-page__title">Jobs</h1>
         <Link to="/recruiter/jobs/create">
           <Button>Create job</Button>
         </Link>
       </div>
 
-      <Select
-        id="statusFilter"
-        value={statusFilter}
-        onChange={(e) => {
-          setPage(1);
-          setStatusFilter(e.target.value);
-        }}
-        options={STATUS_OPTIONS}
-        className="w-48"
-      />
+      <div className="filter-field">
+        <FloatingSelect
+          id="statusFilter"
+          label="Status"
+          labelBg="muted"
+          value={statusFilter}
+          onChange={(e) => {
+            setPage(1);
+            setStatusFilter(e.target.value);
+          }}
+          options={STATUS_OPTIONS}
+        />
+      </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="card">
         {state.status === 'error' ? (
-          <p className="p-8 text-center text-sm text-red-600">Unable to load jobs. Please try again.</p>
+          <p className="table-error">Unable to load jobs. Please try again.</p>
         ) : (
           <>
             <DataTable columns={columns} rows={state.jobs} rowKey="_id" loading={state.status === 'loading'} emptyMessage="No jobs yet." />

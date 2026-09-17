@@ -39,23 +39,23 @@ export default function RecruiterJobDetail() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading job...</p>;
+    return <p className="text-muted">Loading job...</p>;
   }
 
   if (state.status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load this job. Please try again.</p>;
+    return <p className="text-error">Unable to load this job. Please try again.</p>;
   }
 
   const job = state.job;
 
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-start justify-between">
+    <div className="form-page">
+      <div className="recruiter-job-detail__header">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">{job.title}</h1>
-          <div className="mt-1 flex items-center gap-2">
+          <h1 className="dashboard-page__title">{job.title}</h1>
+          <div className="recruiter-job-detail__status-row">
             <Badge variant={STATUS_VARIANT[job.status]}>{job.status}</Badge>
-            <span className="text-sm text-gray-500">
+            <span className="text-faint">
               {job.department} &middot; {job.location}
             </span>
           </div>
@@ -65,7 +65,7 @@ export default function RecruiterJobDetail() {
         </Link>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="recruiter-job-detail__actions">
         {TRANSITIONS[job.status].map((t) => (
           <Button key={t.to} variant="secondary" onClick={() => changeStatus(t.to)}>
             {t.label}
@@ -73,17 +73,17 @@ export default function RecruiterJobDetail() {
         ))}
       </div>
 
-      {actionError && <p className="mt-2 text-sm text-red-600">{actionError}</p>}
+      {actionError && <p className="text-error">{actionError}</p>}
 
-      <section className="mt-6">
-        <h2 className="text-lg font-semibold text-gray-900">Description</h2>
-        <p className="mt-2 whitespace-pre-line text-sm text-gray-700">{job.description}</p>
+      <section className="job-detail__section">
+        <h2 className="job-detail__section-title">Description</h2>
+        <p className="job-detail__section-body">{job.description}</p>
       </section>
 
       {job.requiredSkills?.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-900">Required skills</h2>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        <section className="job-detail__section">
+          <h2 className="job-detail__section-title">Required skills</h2>
+          <div className="job-detail__skills">
             {job.requiredSkills.map((skill) => (
               <Badge key={skill} variant="brand">
                 {skill}
