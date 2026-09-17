@@ -21,6 +21,7 @@ import RecruiterJobForm from '../pages/recruiter/JobForm';
 import RecruiterJobDetail from '../pages/recruiter/JobDetail';
 import RecruiterApplications from '../pages/recruiter/Applications';
 import RecruiterApplicationDetail from '../pages/recruiter/ApplicationDetail';
+import RecruiterPipeline from '../pages/recruiter/Pipeline';
 import InterviewerDashboard from '../pages/interviewer/Dashboard';
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers from '../pages/admin/Users';
@@ -56,6 +57,7 @@ export default function AppRoutes() {
             <Route path="/recruiter/jobs/:id" element={<RecruiterJobDetail />} />
             <Route path="/recruiter/applications" element={<RecruiterApplications />} />
             <Route path="/recruiter/applications/:id" element={<RecruiterApplicationDetail />} />
+            <Route path="/recruiter/candidates" element={<RecruiterPipeline />} />
           </Route>
           <Route element={<RoleRoute allow={['interviewer']} />}>
             <Route path="/interviewer/dashboard" element={<InterviewerDashboard />} />

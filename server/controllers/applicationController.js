@@ -6,6 +6,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { parsePagination, paginate } from '../utils/paginate.js';
+import { assertSameOrganization } from '../middleware/tenantMiddleware.js';
 
 export const createApplication = asyncHandler(async (req, res) => {
   const { jobId, coverLetter, expectedSalary, availability } = req.body;
@@ -42,30 +43,118 @@ export const createApplication = asyncHandler(async (req, res) => {
     coverLetter,
     expectedSalary,
     availability,
+    statusHistory: [{ status: 'applied', changedBy: req.user._id }],
   });
 
   sendSuccess(res, { statusCode: 201, message: 'Application submitted successfully', data: { application } });
 });
 
-export const listApplications = asyncHandler(async (req, res) => {
-  const { jobId, status } = req.validatedQuery;
-  const pagination = parsePagination(req.validatedQuery);
-
+function buildBaseFilter(req, { jobId, status, dateFrom, dateTo }) {
   const filter = {};
+
   if (req.user.role === 'candidate') {
     filter.candidateId = req.user._id;
   } else {
     filter.organizationId = req.user.organizationId;
-    if (jobId) filter.jobId = jobId;
+    if (jobId) filter.jobId = new mongoose.Types.ObjectId(jobId);
   }
+
   if (status) filter.status = status;
 
-  const result = await paginate(Application, filter, pagination, {
-    populate: [
-      { path: 'jobId', select: 'title department location employmentType workMode' },
-      { path: 'candidateId', select: 'name email' },
-    ],
+  if (dateFrom || dateTo) {
+    filter.appliedAt = {};
+    if (dateFrom) filter.appliedAt.$gte = dateFrom;
+    if (dateTo) filter.appliedAt.$lte = dateTo;
+  }
+
+  return filter;
+}
+
+async function listViaAggregation(filter, { page, limit, skip }, { department, search, sort }) {
+  const pipeline = [
+    { $match: filter },
+    { $lookup: { from: 'jobs', localField: 'jobId', foreignField: '_id', as: 'jobId' } },
+    { $unwind: '$jobId' },
+    { $lookup: { from: 'users', localField: 'candidateId', foreignField: '_id', as: 'candidateId' } },
+    { $unwind: '$candidateId' },
+  ];
+
+  if (department) {
+    pipeline.push({ $match: { 'jobId.department': { $regex: department, $options: 'i' } } });
+  }
+
+  if (search) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { 'candidateId.name': { $regex: search, $options: 'i' } },
+          { 'candidateId.email': { $regex: search, $options: 'i' } },
+        ],
+      },
+    });
+  }
+
+  const sortStage =
+    sort === 'oldest'
+      ? { appliedAt: 1 }
+      : sort === 'name_asc'
+        ? { 'candidateId.name': 1 }
+        : sort === 'name_desc'
+          ? { 'candidateId.name': -1 }
+          : { appliedAt: -1 };
+
+  pipeline.push({ $sort: sortStage });
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            organizationId: 1,
+            jobId: { _id: 1, title: 1, department: 1, location: 1, employmentType: 1, workMode: 1 },
+            candidateId: { _id: 1, name: 1, email: 1 },
+            resumeSnapshot: 1,
+            coverLetter: 1,
+            expectedSalary: 1,
+            availability: 1,
+            status: 1,
+            appliedAt: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        },
+      ],
+      totalCount: [{ $count: 'count' }],
+    },
   });
+
+  const [result] = await Application.aggregate(pipeline);
+  const data = result?.data || [];
+  const total = result?.totalCount?.[0]?.count || 0;
+
+  return {
+    data,
+    pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+  };
+}
+
+export const listApplications = asyncHandler(async (req, res) => {
+  const { jobId, status, department, search, sort, dateFrom, dateTo } = req.validatedQuery;
+  const pagination = parsePagination(req.validatedQuery);
+  const filter = buildBaseFilter(req, { jobId, status, dateFrom, dateTo });
+
+  const needsAggregation = Boolean(department || search || sort === 'name_asc' || sort === 'name_desc');
+
+  const result = needsAggregation
+    ? await listViaAggregation(filter, pagination, { department, search, sort })
+    : await paginate(Application, filter, pagination, {
+        sort: sort === 'oldest' ? { appliedAt: 1 } : { appliedAt: -1 },
+        populate: [
+          { path: 'jobId', select: 'title department location employmentType workMode' },
+          { path: 'candidateId', select: 'name email' },
+        ],
+      });
 
   sendSuccess(res, { message: 'Applications retrieved successfully', data: result.data, pagination: result.pagination });
 });
@@ -77,7 +166,8 @@ export const getApplication = asyncHandler(async (req, res) => {
 
   const application = await Application.findById(req.params.id)
     .populate('jobId', 'title department location employmentType workMode organizationId')
-    .populate('candidateId', 'name email');
+    .populate('candidateId', 'name email')
+    .populate('statusHistory.changedBy', 'name');
 
   if (!application) {
     throw new ApiError(404, 'Application not found');
@@ -92,4 +182,29 @@ export const getApplication = asyncHandler(async (req, res) => {
   }
 
   sendSuccess(res, { message: 'Application retrieved successfully', data: { application } });
+});
+
+export async function findOrgScopedApplication(req) {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    throw new ApiError(404, 'Application not found');
+  }
+
+  const application = await Application.findById(req.params.id);
+  if (!application) {
+    throw new ApiError(404, 'Application not found');
+  }
+
+  assertSameOrganization(req, application.organizationId);
+  return application;
+}
+
+export const updateApplicationStatus = asyncHandler(async (req, res) => {
+  const application = await findOrgScopedApplication(req);
+  const { status } = req.body;
+
+  application.status = status;
+  application.statusHistory.push({ status, changedBy: req.user._id });
+  await application.save();
+
+  sendSuccess(res, { message: 'Application status updated successfully', data: { application } });
 });

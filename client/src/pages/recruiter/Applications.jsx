@@ -1,28 +1,48 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { applicationsApi } from '../../api/applicationsApi';
+import { useDebounce } from '../../hooks/useDebounce';
 import DataTable from '../../components/ui/DataTable';
 import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
-import Select from '../../components/ui/Select';
+import FloatingInput from '../../components/ui/FloatingInput';
+import FloatingSelect from '../../components/ui/FloatingSelect';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
 
 const STATUS_OPTIONS = [{ value: '', label: 'All statuses' }, ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))];
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'name_asc', label: 'Candidate name (A-Z)' },
+  { value: 'name_desc', label: 'Candidate name (Z-A)' },
+];
+
 export default function RecruiterApplications() {
   const [state, setState] = useState({ status: 'loading', applications: [], pagination: null });
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
+
+  const debouncedSearch = useDebounce(search);
 
   const load = useCallback(async () => {
     setState((s) => ({ ...s, status: 'loading' }));
     try {
-      const res = await applicationsApi.list({ page, limit: 20, status: statusFilter || undefined });
+      const res = await applicationsApi.list({
+        page,
+        limit: 20,
+        status: statusFilter || undefined,
+        search: debouncedSearch || undefined,
+        sort,
+      });
       setState({ status: 'success', applications: res.data.data, pagination: res.data.pagination });
     } catch {
       setState({ status: 'error', applications: [], pagination: null });
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, debouncedSearch, sort]);
 
   useEffect(() => {
     load();
@@ -33,7 +53,7 @@ export default function RecruiterApplications() {
       key: 'candidate',
       header: 'Candidate',
       render: (row) => (
-        <Link to={`/recruiter/applications/${row._id}`} className="font-medium text-brand-600 hover:underline">
+        <Link to={`/recruiter/applications/${row._id}`} className="link-accent">
           {row.candidateId?.name}
         </Link>
       ),
@@ -53,23 +73,55 @@ export default function RecruiterApplications() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-900">Applications</h1>
+    <div className="dashboard-page">
+      <h1 className="dashboard-page__title">Applications</h1>
 
-      <Select
-        id="statusFilter"
-        value={statusFilter}
-        onChange={(e) => {
-          setPage(1);
-          setStatusFilter(e.target.value);
-        }}
-        options={STATUS_OPTIONS}
-        className="w-56"
-      />
+      <div className="filter-row">
+        <div className="filter-field--wide">
+          <FloatingInput
+            id="candidateSearch"
+            label="Search by candidate name or email"
+            type="search"
+            icon={Search}
+            labelBg="muted"
+            value={search}
+            onChange={(e) => {
+              setPage(1);
+              setSearch(e.target.value);
+            }}
+          />
+        </div>
+        <div className="filter-field">
+          <FloatingSelect
+            id="statusFilter"
+            label="Status"
+            labelBg="muted"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            options={STATUS_OPTIONS}
+          />
+        </div>
+        <div className="filter-field">
+          <FloatingSelect
+            id="sort"
+            label="Sort"
+            labelBg="muted"
+            value={sort}
+            onChange={(e) => {
+              setPage(1);
+              setSort(e.target.value);
+            }}
+            options={SORT_OPTIONS}
+          />
+        </div>
+      </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="card">
         {state.status === 'error' ? (
-          <p className="p-8 text-center text-sm text-red-600">Unable to load applications. Please try again.</p>
+          <p className="table-error">Unable to load applications. Please try again.</p>
         ) : (
           <>
             <DataTable

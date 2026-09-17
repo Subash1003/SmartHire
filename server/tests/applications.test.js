@@ -247,3 +247,95 @@ describe('GET /api/v1/applications/:id', () => {
     expect(recruiterRes.status).toBe(200);
   });
 });
+
+describe('PATCH /api/v1/applications/:id/status', () => {
+  async function applyAsNewCandidate(job) {
+    const { agent, csrfToken, user } = await createAndLoginUser('candidate');
+    await giveCandidateResume(user._id);
+    const createRes = await agent.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: job._id });
+    return createRes.body.data.application._id;
+  }
+
+  it('rejects candidate role', async () => {
+    const { user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const { agent: candidate, csrfToken } = await createAndLoginUser('candidate');
+
+    const applicationId = await applyAsNewCandidate(job);
+    const res = await candidate.patch(`/api/v1/applications/${applicationId}/status`).set('X-CSRF-Token', csrfToken).send({ status: 'shortlisted' });
+    expect(res.status).toBe(403);
+  });
+
+  it('allows a recruiter to move a candidate to any status and records history', async () => {
+    const { agent: recruiterAgent, csrfToken, user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const applicationId = await applyAsNewCandidate(job);
+
+    const res = await recruiterAgent
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ status: 'shortlisted' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.application.status).toBe('shortlisted');
+    expect(res.body.data.application.statusHistory).toHaveLength(2);
+    expect(res.body.data.application.statusHistory[1].status).toBe('shortlisted');
+
+    const backToReview = await recruiterAgent
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ status: 'under_review' });
+    expect(backToReview.status).toBe(200);
+    expect(backToReview.body.data.application.status).toBe('under_review');
+  });
+
+  it('blocks a recruiter from a different org from updating the status', async () => {
+    const { user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+    const applicationId = await applyAsNewCandidate(job);
+
+    const otherOrg = await Organization.create({ name: 'Other Org' });
+    const { agent: otherRecruiter, csrfToken: otherCsrf } = await createAndLoginUser('recruiter', otherOrg._id);
+    const res = await otherRecruiter
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('X-CSRF-Token', otherCsrf)
+      .send({ status: 'shortlisted' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/v1/applications search & sort', () => {
+  it('finds a candidate by name via search', async () => {
+    const { agent: recruiterAgent, user: recruiter } = await createAndLoginUser('recruiter');
+    const job = await createPublishedJob(organization._id, recruiter._id);
+
+    const { agent: candidate, csrfToken, user: candidateUser } = await createAndLoginUser('candidate', organization._id, {
+      name: 'Zara Unique Name',
+    });
+    await giveCandidateResume(candidateUser._id);
+    await candidate.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: job._id });
+
+    const res = await recruiterAgent.get('/api/v1/applications?search=Zara Unique');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].candidateId.name).toBe('Zara Unique Name');
+  });
+
+  it('does not leak another organization\'s candidates into a search', async () => {
+    const { agent: recruiterAgent, user: recruiter } = await createAndLoginUser('recruiter');
+    await createPublishedJob(organization._id, recruiter._id);
+
+    const otherOrg = await Organization.create({ name: 'Other Org' });
+    const { user: otherRecruiter } = await createAndLoginUser('recruiter', otherOrg._id);
+    const otherJob = await createPublishedJob(otherOrg._id, otherRecruiter._id);
+    const { agent: candidate, csrfToken, user: candidateUser } = await createAndLoginUser('candidate', otherOrg._id, {
+      name: 'Searchable Person',
+    });
+    await giveCandidateResume(candidateUser._id);
+    await candidate.post('/api/v1/applications').set('X-CSRF-Token', csrfToken).send({ jobId: otherJob._id });
+
+    const res = await recruiterAgent.get('/api/v1/applications?search=Searchable');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+  });
+});

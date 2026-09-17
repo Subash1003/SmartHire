@@ -1,73 +1,198 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { applicationsApi } from '../../api/applicationsApi';
+import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
 import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import FloatingSelect from '../../components/ui/FloatingSelect';
+import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
+
+const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }));
 
 export default function RecruiterApplicationDetail() {
   const { id } = useParams();
   const [state, setState] = useState({ status: 'loading', application: null });
+  const [statusValue, setStatusValue] = useState('');
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [statusError, setStatusError] = useState('');
 
-  useEffect(() => {
+  const [notes, setNotes] = useState([]);
+  const [notesStatus, setNotesStatus] = useState('loading');
+  const [noteError, setNoteError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm();
+
+  const loadApplication = () => {
     applicationsApi
       .get(id)
-      .then((res) => setState({ status: 'success', application: res.data.data.application }))
+      .then((res) => {
+        setState({ status: 'success', application: res.data.data.application });
+        setStatusValue(res.data.data.application.status);
+      })
       .catch(() => setState({ status: 'error', application: null }));
+  };
+
+  const loadNotes = () => {
+    setNotesStatus('loading');
+    applicationsApi
+      .listNotes(id)
+      .then((res) => {
+        setNotes(res.data.data.notes);
+        setNotesStatus('success');
+      })
+      .catch(() => setNotesStatus('error'));
+  };
+
+  useEffect(() => {
+    loadApplication();
+    loadNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const handleStatusUpdate = async () => {
+    setStatusError('');
+    setStatusSaving(true);
+    try {
+      await applicationsApi.updateStatus(id, statusValue);
+      loadApplication();
+    } catch (err) {
+      setStatusError(getApiErrorMessage(err, 'Unable to update status.'));
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
+  const onAddNote = async (values) => {
+    setNoteError('');
+    try {
+      await applicationsApi.createNote(id, values.content);
+      reset({ content: '' });
+      loadNotes();
+    } catch (err) {
+      setNoteError(getApiErrorMessage(err, 'Unable to add note.'));
+    }
+  };
+
   if (state.status === 'loading') {
-    return <p className="text-sm text-gray-500">Loading application...</p>;
+    return <p className="text-muted">Loading application...</p>;
   }
 
   if (state.status === 'error') {
-    return <p className="text-sm text-red-600">Unable to load this application. Please try again.</p>;
+    return <p className="text-error">Unable to load this application. Please try again.</p>;
   }
 
   const application = state.application;
 
   return (
-    <div className="max-w-2xl">
-      <Link to="/recruiter/applications" className="text-sm text-brand-600 hover:underline">
+    <div className="form-page">
+      <Link to="/recruiter/applications" className="link-accent">
         &larr; Back to applications
       </Link>
 
-      <div className="mt-4 flex items-center gap-3">
-        <h1 className="text-xl font-semibold text-gray-900">{application.candidateId?.name}</h1>
+      <div className="application-detail__header">
+        <h1 className="dashboard-page__title">{application.candidateId?.name}</h1>
         <Badge variant={STATUS_VARIANT[application.status]}>{STATUS_LABELS[application.status]}</Badge>
       </div>
-      <p className="text-sm text-gray-600">{application.candidateId?.email}</p>
+      <p className="text-muted">{application.candidateId?.email}</p>
 
-      <p className="mt-2 text-sm text-gray-600">
-        Applied to <span className="font-medium text-gray-900">{application.jobId?.title}</span> on{' '}
+      <p className="text-muted application-detail__applied-on">
+        Applied to <span className="application-detail__label">{application.jobId?.title}</span> on{' '}
         {new Date(application.appliedAt).toLocaleDateString()}
       </p>
 
-      <div className="mt-6 space-y-4 text-sm text-gray-700">
+      <div className="application-detail__body">
         <p>
-          <span className="font-semibold text-gray-900">Resume:</span>{' '}
-          <a href={application.resumeSnapshot.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+          <span className="application-detail__label">Resume:</span>{' '}
+          <a href={application.resumeSnapshot.url} target="_blank" rel="noreferrer" className="link-accent">
             {application.resumeSnapshot.fileName}
           </a>
         </p>
         {application.coverLetter && (
           <div>
-            <h2 className="font-semibold text-gray-900">Cover letter</h2>
-            <p className="mt-1 whitespace-pre-line">{application.coverLetter}</p>
+            <h2 className="application-detail__label">Cover letter</h2>
+            <p className="application-detail__cover-letter">{application.coverLetter}</p>
           </div>
         )}
         {application.expectedSalary && (
           <p>
-            <span className="font-semibold text-gray-900">Expected salary:</span> {application.expectedSalary}
+            <span className="application-detail__label">Expected salary:</span> {application.expectedSalary}
           </p>
         )}
         {application.availability && (
           <p>
-            <span className="font-semibold text-gray-900">Availability:</span> {application.availability}
+            <span className="application-detail__label">Availability:</span> {application.availability}
           </p>
         )}
       </div>
 
-      <p className="mt-6 text-xs text-gray-400">Status changes are managed from the recruitment pipeline (coming next).</p>
+      <section className="card card--padded card--shadow application-detail__status-card">
+        <h2 className="profile-page__section-title">Update status</h2>
+        <div className="application-detail__status-row">
+          <div className="filter-field">
+            <FloatingSelect
+              id="statusValue"
+              label="Status"
+              value={statusValue}
+              onChange={(e) => setStatusValue(e.target.value)}
+              options={STATUS_OPTIONS}
+            />
+          </div>
+          <Button onClick={handleStatusUpdate} disabled={statusSaving || statusValue === application.status}>
+            {statusSaving ? 'Updating...' : 'Update status'}
+          </Button>
+        </div>
+        {statusError && <p className="text-error">{statusError}</p>}
+
+        {application.statusHistory?.length > 0 && (
+          <ul className="application-detail__history">
+            {[...application.statusHistory].reverse().map((entry, index) => (
+              <li key={index} className="application-detail__history-item">
+                <Badge variant={STATUS_VARIANT[entry.status]}>{STATUS_LABELS[entry.status]}</Badge>
+                <span className="text-faint">
+                  {entry.changedBy?.name ? `by ${entry.changedBy.name}` : ''} on{' '}
+                  {new Date(entry.changedAt).toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card card--padded card--shadow application-detail__notes-card">
+        <h2 className="profile-page__section-title">Private notes</h2>
+        <p className="text-faint">Only visible to your recruiting team — never shown to the candidate.</p>
+
+        <form onSubmit={handleSubmit(onAddNote)} className="application-detail__note-form" noValidate>
+          <FloatingTextarea id="content" label="Add a note" rows={3} {...register('content', { required: true })} />
+          <Button type="submit" disabled={isSubmitting} className="application-detail__note-submit">
+            {isSubmitting ? 'Adding...' : 'Add note'}
+          </Button>
+        </form>
+        {noteError && <p className="text-error">{noteError}</p>}
+
+        {notesStatus === 'loading' && <p className="text-muted">Loading notes...</p>}
+        {notesStatus === 'error' && <p className="text-error">Unable to load notes.</p>}
+        {notesStatus === 'success' && (
+          <ul className="application-detail__notes-list">
+            {notes.length === 0 && <li className="text-faint">No notes yet.</li>}
+            {notes.map((note) => (
+              <li key={note._id} className="application-detail__note-item">
+                <p className="application-detail__note-content">{note.content}</p>
+                <p className="text-faint">
+                  {note.authorId?.name} &middot; {new Date(note.createdAt).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

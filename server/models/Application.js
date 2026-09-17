@@ -21,6 +21,15 @@ const resumeSnapshotSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const statusHistoryEntrySchema = new mongoose.Schema(
+  {
+    status: { type: String, enum: APPLICATION_STATUSES, required: true },
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    changedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const applicationSchema = new mongoose.Schema(
   {
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
@@ -31,6 +40,7 @@ const applicationSchema = new mongoose.Schema(
     expectedSalary: { type: Number, default: null },
     availability: { type: String, default: '' },
     status: { type: String, enum: APPLICATION_STATUSES, default: 'applied', index: true },
+    statusHistory: { type: [statusHistoryEntrySchema], default: [] },
     appliedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

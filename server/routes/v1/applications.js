@@ -1,10 +1,16 @@
 import { Router } from 'express';
 import * as applicationController from '../../controllers/applicationController.js';
+import * as noteController from '../../controllers/noteController.js';
 import { requireAuth } from '../../middleware/authMiddleware.js';
 import { requireRole } from '../../middleware/roleMiddleware.js';
 import { verifyCsrf } from '../../middleware/csrfMiddleware.js';
 import { validate, validateQuery } from '../../middleware/validateMiddleware.js';
-import { createApplicationSchema, listApplicationsQuerySchema } from '../../validators/application.schema.js';
+import {
+  createApplicationSchema,
+  listApplicationsQuerySchema,
+  updateApplicationStatusSchema,
+} from '../../validators/application.schema.js';
+import { createNoteSchema } from '../../validators/note.schema.js';
 
 const router = Router();
 
@@ -13,5 +19,15 @@ router.use(requireAuth);
 router.post('/', requireRole('candidate'), verifyCsrf, validate(createApplicationSchema), applicationController.createApplication);
 router.get('/', requireRole('candidate', 'recruiter', 'admin'), validateQuery(listApplicationsQuerySchema), applicationController.listApplications);
 router.get('/:id', requireRole('candidate', 'recruiter', 'admin'), applicationController.getApplication);
+router.patch(
+  '/:id/status',
+  requireRole('recruiter', 'admin'),
+  verifyCsrf,
+  validate(updateApplicationStatusSchema),
+  applicationController.updateApplicationStatus
+);
+
+router.get('/:id/notes', requireRole('recruiter', 'admin'), noteController.listNotes);
+router.post('/:id/notes', requireRole('recruiter', 'admin'), verifyCsrf, validate(createNoteSchema), noteController.createNote);
 
 export default router;

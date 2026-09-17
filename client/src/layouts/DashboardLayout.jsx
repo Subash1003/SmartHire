@@ -12,6 +12,7 @@ const NAV_ITEMS = {
     { to: '/recruiter/dashboard', label: 'Dashboard' },
     { to: '/recruiter/jobs', label: 'Jobs' },
     { to: '/recruiter/applications', label: 'Applications' },
+    { to: '/recruiter/candidates', label: 'Pipeline' },
   ],
   interviewer: [{ to: '/interviewer/dashboard', label: 'Dashboard' }],
   candidate: [
@@ -32,12 +33,12 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <span className="text-lg font-semibold text-gray-900">SmartHire</span>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <div className="dashboard-header__inner">
+          <span className="dashboard-header__logo">SmartHire</span>
+          <div className="cluster cluster--gap-4">
+            <span className="dashboard-header__user">
               {user?.name} &middot; <span className="capitalize">{user?.role}</span>
             </span>
             <Button variant="secondary" onClick={handleLogout}>
@@ -47,17 +48,15 @@ export default function DashboardLayout() {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 gap-8 px-4 py-8">
-        <nav className="w-48 shrink-0">
-          <ul className="flex flex-col gap-1">
+      <div className="dashboard-body">
+        <nav className="dashboard-sidebar">
+          <ul className="dashboard-nav">
             {navItems.map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
                   className={({ isActive }) =>
-                    `block rounded-md px-3 py-2 text-sm font-medium ${
-                      isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-100'
-                    }`
+                    `dashboard-nav__link ${isActive ? 'dashboard-nav__link--active' : ''}`
                   }
                 >
                   {item.label}
@@ -67,7 +66,7 @@ export default function DashboardLayout() {
           </ul>
         </nav>
 
-        <main className="flex-1">
+        <main className="dashboard-main">
           <Outlet />
         </main>
       </div>
