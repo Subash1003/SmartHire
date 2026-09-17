@@ -9,10 +9,15 @@ export function parsePagination(query) {
 }
 
 export async function paginate(model, filter, { page, limit, skip }, options = {}) {
-  const [data, total] = await Promise.all([
-    model.find(filter, options.projection).sort(options.sort || { createdAt: -1 }).skip(skip).limit(limit),
-    model.countDocuments(filter),
-  ]);
+  let query = model.find(filter, options.projection).sort(options.sort || { createdAt: -1 }).skip(skip).limit(limit);
+
+  if (options.populate) {
+    for (const p of options.populate) {
+      query = query.populate(p);
+    }
+  }
+
+  const [data, total] = await Promise.all([query, model.countDocuments(filter)]);
 
   return {
     data,

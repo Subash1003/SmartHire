@@ -22,8 +22,9 @@ export default function JobDetail() {
   const handleApply = () => {
     if (authStatus !== 'authenticated') {
       navigate('/login', { state: { from: `/jobs/${id}` } });
+    } else if (isCandidate) {
+      navigate(`/candidate/jobs/${id}/apply`);
     }
-    // Candidates: the application flow itself is built in the next phase.
   };
 
   if (state.status === 'loading') {
@@ -71,10 +72,7 @@ export default function JobDetail() {
       </div>
 
       <div className="mt-6">
-        <Button onClick={handleApply} disabled={isCandidate}>
-          Apply for this job
-        </Button>
-        {isCandidate && <p className="mt-2 text-sm text-gray-500">Applying opens in a future step.</p>}
+        <Button onClick={handleApply}>Apply for this job</Button>
       </div>
 
       <section className="mt-8">

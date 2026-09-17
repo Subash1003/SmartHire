@@ -11,10 +11,12 @@ const NAV_ITEMS = {
   recruiter: [
     { to: '/recruiter/dashboard', label: 'Dashboard' },
     { to: '/recruiter/jobs', label: 'Jobs' },
+    { to: '/recruiter/applications', label: 'Applications' },
   ],
   interviewer: [{ to: '/interviewer/dashboard', label: 'Dashboard' }],
   candidate: [
     { to: '/candidate/dashboard', label: 'Dashboard' },
+    { to: '/candidate/applications', label: 'My Applications' },
     { to: '/candidate/profile', label: 'Profile' },
   ],
 };

@@ -33,6 +33,7 @@ const projectSchema = new mongoose.Schema(
 const resumeSchema = new mongoose.Schema(
   {
     url: { type: String },
+    publicId: { type: String },
     fileName: { type: String },
     fileType: { type: String },
     fileSize: { type: Number },
