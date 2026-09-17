@@ -1,10 +1,25 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/ui/Button';
+
+const NAV_ITEMS = {
+  admin: [
+    { to: '/admin/dashboard', label: 'Dashboard' },
+    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/settings', label: 'Settings' },
+  ],
+  recruiter: [{ to: '/recruiter/dashboard', label: 'Dashboard' }],
+  interviewer: [{ to: '/interviewer/dashboard', label: 'Dashboard' }],
+  candidate: [
+    { to: '/candidate/dashboard', label: 'Dashboard' },
+    { to: '/candidate/profile', label: 'Profile' },
+  ],
+};
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const navItems = NAV_ITEMS[user?.role] || [];
 
   const handleLogout = async () => {
     await logout();
@@ -27,9 +42,30 @@ export default function DashboardLayout() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        <Outlet />
-      </main>
+      <div className="mx-auto flex w-full max-w-6xl flex-1 gap-8 px-4 py-8">
+        <nav className="w-48 shrink-0">
+          <ul className="flex flex-col gap-1">
+            {navItems.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `block rounded-md px-3 py-2 text-sm font-medium ${
+                      isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

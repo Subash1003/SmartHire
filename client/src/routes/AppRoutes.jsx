@@ -9,9 +9,12 @@ import ResetPassword from '../pages/public/ResetPassword';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import CandidateDashboard from '../pages/candidate/Dashboard';
+import CandidateProfile from '../pages/candidate/Profile';
 import RecruiterDashboard from '../pages/recruiter/Dashboard';
 import InterviewerDashboard from '../pages/interviewer/Dashboard';
 import AdminDashboard from '../pages/admin/Dashboard';
+import AdminUsers from '../pages/admin/Users';
+import AdminSettings from '../pages/admin/Settings';
 
 export default function AppRoutes() {
   return (
@@ -28,6 +31,7 @@ export default function AppRoutes() {
         <Route element={<DashboardLayout />}>
           <Route element={<RoleRoute allow={['candidate']} />}>
             <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+            <Route path="/candidate/profile" element={<CandidateProfile />} />
           </Route>
           <Route element={<RoleRoute allow={['recruiter']} />}>
             <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
@@ -37,6 +41,8 @@ export default function AppRoutes() {
           </Route>
           <Route element={<RoleRoute allow={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>
       </Route>
