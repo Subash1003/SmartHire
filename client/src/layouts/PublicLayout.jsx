@@ -1,6 +1,10 @@
 import { Outlet, Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { roleHomePath } from '../routes/roleHomePath';
 
 export default function PublicLayout() {
+  const { user, status } = useAuth();
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-gray-200 bg-white">
@@ -8,6 +12,23 @@ export default function PublicLayout() {
           <Link to="/" className="text-lg font-semibold text-gray-900">
             SmartHire
           </Link>
+
+          <nav className="flex items-center gap-4 text-sm">
+            {status === 'authenticated' && user ? (
+              <Link to={roleHomePath(user.role)} className="font-medium text-brand-600 hover:underline">
+                Go to dashboard
+              </Link>
+            ) : (
+              <>
+                <Link to="/login" className="text-gray-700 hover:underline">
+                  Log in
+                </Link>
+                <Link to="/register" className="text-gray-700 hover:underline">
+                  Sign up
+                </Link>
+              </>
+            )}
+          </nav>
         </div>
       </header>
 
