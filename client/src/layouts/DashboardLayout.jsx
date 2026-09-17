@@ -8,7 +8,10 @@ const NAV_ITEMS = {
     { to: '/admin/users', label: 'Users' },
     { to: '/admin/settings', label: 'Settings' },
   ],
-  recruiter: [{ to: '/recruiter/dashboard', label: 'Dashboard' }],
+  recruiter: [
+    { to: '/recruiter/dashboard', label: 'Dashboard' },
+    { to: '/recruiter/jobs', label: 'Jobs' },
+  ],
   interviewer: [{ to: '/interviewer/dashboard', label: 'Dashboard' }],
   candidate: [
     { to: '/candidate/dashboard', label: 'Dashboard' },

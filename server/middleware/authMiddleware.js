@@ -26,3 +26,23 @@ export const requireAuth = asyncHandler(async (req, res, next) => {
   req.user = user;
   next();
 });
+
+// Populates req.user when a valid session cookie is present, but never
+// blocks the request otherwise. Used by public-but-personalized routes
+// (e.g. job listing, where staff see more than anonymous visitors).
+export const optionalAuth = asyncHandler(async (req, res, next) => {
+  const token = req.cookies?.accessToken;
+  if (!token) return next();
+
+  try {
+    const payload = verifyAccessToken(token);
+    const user = await User.findById(payload.sub);
+    if (user && user.isActive) {
+      req.user = user;
+    }
+  } catch {
+    // Ignore invalid/expired tokens on optional-auth routes.
+  }
+
+  next();
+});

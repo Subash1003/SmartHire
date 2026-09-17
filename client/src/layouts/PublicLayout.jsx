@@ -14,6 +14,9 @@ export default function PublicLayout() {
           </Link>
 
           <nav className="flex items-center gap-4 text-sm">
+            <Link to="/jobs" className="text-gray-700 hover:underline">
+              Browse jobs
+            </Link>
             {status === 'authenticated' && user ? (
               <Link to={roleHomePath(user.role)} className="font-medium text-brand-600 hover:underline">
                 Go to dashboard
