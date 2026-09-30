@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
 process.env.CLOUDINARY_API_KEY = 'test-key';
 process.env.CLOUDINARY_API_SECRET = 'test-secret';
-process.env.AI_API_KEY = 'test-ai-key';
+process.env.GROQ_API_KEY = 'test-groq-key';
 
 const mockScreenResume = jest.fn(async () => ({
   matchScore: 82,
@@ -14,7 +14,7 @@ const mockScreenResume = jest.fn(async () => ({
   experienceMatch: 85,
   educationMatch: 80,
   summary: 'Good overlap with the role requirements.',
-  model: 'claude-opus-5',
+  model: 'openai/gpt-oss-120b',
 }));
 
 jest.unstable_mockModule('../services/aiService.js', () => ({

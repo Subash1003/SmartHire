@@ -4,6 +4,8 @@ import { jobsApi } from '../../api/jobsApi';
 import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 
 const STATUS_VARIANT = { draft: 'neutral', published: 'success', closed: 'danger', expired: 'warning' };
 
@@ -39,11 +41,11 @@ export default function RecruiterJobDetail() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-muted">Loading job...</p>;
+    return <PageLoading label="Loading job..." />;
   }
 
   if (state.status === 'error') {
-    return <p className="text-error">Unable to load this job. Please try again.</p>;
+    return <PageError message="Unable to load this job." onRetry={load} />;
   }
 
   const job = state.job;
@@ -73,7 +75,11 @@ export default function RecruiterJobDetail() {
         ))}
       </div>
 
-      {actionError && <p className="text-error">{actionError}</p>}
+      {actionError && (
+        <p className="text-error" role="alert">
+          {actionError}
+        </p>
+      )}
 
       <section className="job-detail__section">
         <h2 className="job-detail__section-title">Description</h2>

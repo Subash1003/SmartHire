@@ -10,6 +10,9 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import FloatingSelect from '../../components/ui/FloatingSelect';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
+import ResumeViewerModal from '../../components/resume/ResumeViewerModal';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 import { INTERVIEW_STATUS_LABELS, INTERVIEW_STATUS_VARIANT } from '../../validators/interviewStatus';
 import {
   evaluationFormSchema,
@@ -31,6 +34,7 @@ const RATING_FIELDS = [
 export default function InterviewerInterviewDetail() {
   const { id } = useParams();
   const [state, setState] = useState({ status: 'loading', interview: null, application: null });
+  const [resumeViewerOpen, setResumeViewerOpen] = useState(false);
   const [evaluation, setEvaluation] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -86,11 +90,11 @@ export default function InterviewerInterviewDetail() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-muted">Loading interview...</p>;
+    return <PageLoading label="Loading interview..." />;
   }
 
   if (state.status === 'error') {
-    return <p className="text-error">Unable to load this interview. Please try again.</p>;
+    return <PageError message="Unable to load this interview." onRetry={load} />;
   }
 
   const { interview, application } = state;
@@ -141,9 +145,9 @@ export default function InterviewerInterviewDetail() {
         <section className="job-detail__section">
           <h2 className="job-detail__section-title">Candidate resume</h2>
           <p className="application-detail__body">
-            <a href={application.resumeSnapshot.url} target="_blank" rel="noreferrer" className="link-accent">
-              {application.resumeSnapshot.fileName}
-            </a>
+            <button type="button" className="resume-viewer__trigger" onClick={() => setResumeViewerOpen(true)}>
+              <span className="link-accent">{application.resumeSnapshot.fileName}</span>
+            </button>
           </p>
         </section>
       )}
@@ -206,7 +210,11 @@ export default function InterviewerInterviewDetail() {
               {...register('feedback')}
             />
 
-            {serverError && <p className="text-error">{serverError}</p>}
+            {serverError && (
+            <p className="text-error" role="alert">
+              {serverError}
+            </p>
+          )}
 
             <div className="cluster cluster--gap-2">
               <Button type="submit" disabled={isSubmitting}>
@@ -221,6 +229,16 @@ export default function InterviewerInterviewDetail() {
           </form>
         )}
       </section>
+
+      {application && (
+        <ResumeViewerModal
+          open={resumeViewerOpen}
+          onClose={() => setResumeViewerOpen(false)}
+          resumeUrl={application.resumeSnapshot.url}
+          fileName={application.resumeSnapshot.fileName}
+          fileType={application.resumeSnapshot.fileType}
+        />
+      )}
     </div>
   );
 }

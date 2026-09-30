@@ -191,6 +191,43 @@ describe('Public job listing', () => {
     expect(res.body.data[0].title).toBe('React Dev');
   });
 
+  it('matches on a partial, case-insensitive substring of the title (not just whole words)', async () => {
+    const { agent, csrfToken } = await createAndLoginUser('recruiter');
+    const job1 = await agent
+      .post('/api/v1/jobs')
+      .set('X-CSRF-Token', csrfToken)
+      .send(validJobPayload({ title: 'Backend Developer', requiredSkills: ['Node.js'] }));
+    const job2 = await agent
+      .post('/api/v1/jobs')
+      .set('X-CSRF-Token', csrfToken)
+      .send(validJobPayload({ title: 'Frontend Developer', requiredSkills: ['React'] }));
+
+    await agent.patch(`/api/v1/jobs/${job1.body.data.job._id}/status`).set('X-CSRF-Token', csrfToken).send({ status: 'published' });
+    await agent.patch(`/api/v1/jobs/${job2.body.data.job._id}/status`).set('X-CSRF-Token', csrfToken).send({ status: 'published' });
+
+    const res = await request(app).get('/api/v1/jobs?search=back');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].title).toBe('Backend Developer');
+
+    const skillRes = await request(app).get('/api/v1/jobs?search=Reac');
+    expect(skillRes.body.data).toHaveLength(1);
+    expect(skillRes.body.data[0].title).toBe('Frontend Developer');
+  });
+
+  it('does not error out when the search text contains regex metacharacters', async () => {
+    const { agent, csrfToken } = await createAndLoginUser('recruiter');
+    const job = await agent
+      .post('/api/v1/jobs')
+      .set('X-CSRF-Token', csrfToken)
+      .send(validJobPayload({ title: 'C++ Developer' }));
+    await agent.patch(`/api/v1/jobs/${job.body.data.job._id}/status`).set('X-CSRF-Token', csrfToken).send({ status: 'published' });
+
+    const res = await request(app).get('/api/v1/jobs?search=C%2B%2B');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+  });
+
   it('paginates results', async () => {
     const { agent, csrfToken } = await createAndLoginUser('recruiter');
     for (let i = 0; i < 3; i += 1) {

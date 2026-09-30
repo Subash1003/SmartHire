@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingSelect from '../../components/ui/FloatingSelect';
+import PageError from '../../components/ui/PageError';
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -135,11 +136,15 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {actionError && <p className="text-error">{actionError}</p>}
+      {actionError && (
+        <p className="text-error" role="alert">
+          {actionError}
+        </p>
+      )}
 
       <div className="card">
         {state.status === 'error' ? (
-          <p className="table-error">Unable to load users. Please try again.</p>
+          <PageError message="Unable to load users." onRetry={loadUsers} />
         ) : (
           <>
             <DataTable columns={columns} rows={state.users} rowKey="_id" loading={state.status === 'loading'} />
@@ -163,7 +168,11 @@ export default function AdminUsers() {
           />
           <FloatingSelect id="role" label="Role" options={ROLE_OPTIONS} error={errors.role?.message} {...register('role')} />
 
-          {formError && <p className="text-error">{formError}</p>}
+          {formError && (
+            <p className="text-error" role="alert">
+              {formError}
+            </p>
+          )}
 
           <Button type="submit" disabled={isSubmitting} className="btn--block">
             {isSubmitting ? 'Creating...' : 'Create user'}

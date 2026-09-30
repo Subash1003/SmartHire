@@ -1,18 +1,17 @@
 import { jest } from '@jest/globals';
 
-process.env.AI_API_KEY = 'test-ai-key';
+process.env.GROQ_API_KEY = 'test-groq-key';
 
-const mockCreate = jest.fn();
+const originalFetch = global.fetch;
+const mockFetch = jest.fn();
 
-class MockAnthropic {
-  constructor() {
-    this.messages = { create: mockCreate };
-  }
-}
+beforeAll(() => {
+  global.fetch = mockFetch;
+});
 
-jest.unstable_mockModule('@anthropic-ai/sdk', () => ({
-  default: MockAnthropic,
-}));
+afterAll(() => {
+  global.fetch = originalFetch;
+});
 
 const { screenResume } = await import('../services/aiService.js');
 
@@ -25,75 +24,109 @@ const job = {
   description: 'Build user interfaces.',
 };
 
-beforeEach(() => {
-  mockCreate.mockReset();
-});
-
-describe('aiService.screenResume', () => {
-  it('returns the structured result from the tool_use block', async () => {
-    mockCreate.mockResolvedValue({
-      content: [
+function groqResponse(toolArguments) {
+  return {
+    ok: true,
+    json: async () => ({
+      choices: [
         {
-          type: 'tool_use',
-          name: 'provide_resume_screening',
-          input: {
-            matchScore: 82,
-            matchedSkills: ['React', 'JavaScript'],
-            missingSkills: ['TypeScript'],
-            experienceMatch: 85,
-            educationMatch: 80,
-            summary: 'Strong overlap with required skills.',
+          message: {
+            tool_calls: [
+              {
+                function: {
+                  name: 'provide_resume_screening',
+                  arguments: JSON.stringify(toolArguments),
+                },
+              },
+            ],
           },
         },
       ],
-    });
+    }),
+  };
+}
+
+beforeEach(() => {
+  mockFetch.mockReset();
+});
+
+describe('aiService.screenResume', () => {
+  it('returns the structured result from the tool call', async () => {
+    mockFetch.mockResolvedValue(
+      groqResponse({
+        matchScore: 82,
+        matchedSkills: ['React', 'JavaScript'],
+        missingSkills: ['TypeScript'],
+        experienceMatch: 85,
+        educationMatch: 80,
+        summary: 'Strong overlap with required skills.',
+      })
+    );
 
     const result = await screenResume({ job, resumeText: 'Experienced React developer...' });
 
     expect(result.matchScore).toBe(82);
     expect(result.matchedSkills).toEqual(['React', 'JavaScript']);
-    expect(result.model).toBe('claude-opus-5');
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(result.model).toBe('openai/gpt-oss-120b');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
 
-    const callArgs = mockCreate.mock.calls[0][0];
-    expect(callArgs.tool_choice).toEqual({ type: 'tool', name: 'provide_resume_screening' });
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(options.headers.Authorization).toBe('Bearer test-groq-key');
+    const body = JSON.parse(options.body);
+    expect(body.tool_choice).toEqual({ type: 'function', function: { name: 'provide_resume_screening' } });
   });
 
   it('throws a 503 ApiError when the API call fails', async () => {
-    mockCreate.mockRejectedValue(new Error('network error'));
+    mockFetch.mockRejectedValue(new Error('network error'));
 
     await expect(screenResume({ job, resumeText: 'resume text' })).rejects.toMatchObject({ statusCode: 503 });
   });
 
-  it('throws a 503 ApiError when no tool_use block is returned', async () => {
-    mockCreate.mockResolvedValue({ content: [{ type: 'text', text: 'I cannot help with that.' }] });
+  it('throws a 503 ApiError when the response is not ok', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 401, text: async () => 'invalid api key' });
+
+    await expect(screenResume({ job, resumeText: 'resume text' })).rejects.toMatchObject({ statusCode: 503 });
+  });
+
+  it('throws a 503 ApiError when no tool call is returned', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: 'I cannot help with that.' } }] }),
+    });
+
+    await expect(screenResume({ job, resumeText: 'resume text' })).rejects.toMatchObject({ statusCode: 503 });
+  });
+
+  it('throws a 503 ApiError when the tool call arguments are malformed JSON', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { tool_calls: [{ function: { name: 'provide_resume_screening', arguments: '{not json' } }] } }],
+      }),
+    });
 
     await expect(screenResume({ job, resumeText: 'resume text' })).rejects.toMatchObject({ statusCode: 503 });
   });
 
   it('truncates very long resume text before sending it', async () => {
-    mockCreate.mockResolvedValue({
-      content: [
-        {
-          type: 'tool_use',
-          name: 'provide_resume_screening',
-          input: {
-            matchScore: 50,
-            matchedSkills: [],
-            missingSkills: [],
-            experienceMatch: 50,
-            educationMatch: 50,
-            summary: 'summary',
-          },
-        },
-      ],
-    });
+    mockFetch.mockResolvedValue(
+      groqResponse({
+        matchScore: 50,
+        matchedSkills: [],
+        missingSkills: [],
+        experienceMatch: 50,
+        educationMatch: 50,
+        summary: 'summary',
+      })
+    );
 
     const longResume = 'x'.repeat(20000);
     await screenResume({ job, resumeText: longResume });
 
-    const callArgs = mockCreate.mock.calls[0][0];
-    const userMessage = callArgs.messages[0].content;
+    const [, options] = mockFetch.mock.calls[0];
+    const body = JSON.parse(options.body);
+    const userMessage = body.messages.find((m) => m.role === 'user').content;
     expect(userMessage.length).toBeLessThan(15000);
   });
 });

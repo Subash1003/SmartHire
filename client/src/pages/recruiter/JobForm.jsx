@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -9,6 +9,8 @@ import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import FloatingSelect from '../../components/ui/FloatingSelect';
 import Button from '../../components/ui/Button';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 
 export default function JobForm() {
   const { id } = useParams();
@@ -27,8 +29,9 @@ export default function JobForm() {
     defaultValues: { employmentType: 'full-time', workMode: 'remote' },
   });
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!isEditing) return;
+    setStatus('loading');
     jobsApi
       .get(id)
       .then((res) => {
@@ -37,6 +40,10 @@ export default function JobForm() {
       })
       .catch(() => setStatus('error'));
   }, [id, isEditing, reset]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const onSubmit = async (values) => {
     setServerError('');
@@ -55,11 +62,11 @@ export default function JobForm() {
   };
 
   if (status === 'loading') {
-    return <p className="text-muted">Loading job...</p>;
+    return <PageLoading label="Loading job..." />;
   }
 
   if (status === 'error') {
-    return <p className="text-error">Unable to load this job. Please try again.</p>;
+    return <PageError message="Unable to load this job." onRetry={load} />;
   }
 
   return (
@@ -142,7 +149,11 @@ export default function JobForm() {
             {...register('deadline')}
           />
 
-          {serverError && <p className="text-error">{serverError}</p>}
+          {serverError && (
+            <p className="text-error" role="alert">
+              {serverError}
+            </p>
+          )}
 
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : isEditing ? 'Save changes' : 'Create job'}

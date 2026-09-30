@@ -4,6 +4,7 @@ import { applicationsApi } from '../../api/applicationsApi';
 import DataTable from '../../components/ui/DataTable';
 import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
+import PageError from '../../components/ui/PageError';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
 
 export default function CandidateApplications() {
@@ -52,7 +53,7 @@ export default function CandidateApplications() {
 
       <div className="card">
         {state.status === 'error' ? (
-          <p className="table-error">Unable to load applications. Please try again.</p>
+          <PageError message="Unable to load applications." onRetry={load} />
         ) : (
           <>
             <DataTable

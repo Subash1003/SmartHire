@@ -6,6 +6,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { assertSameOrganization } from '../middleware/tenantMiddleware.js';
 import { findOrgScopedApplication } from './applicationController.js';
+import { createNotification } from '../services/notificationService.js';
+import { createAuditLog } from '../services/auditService.js';
 
 async function findOwnedInterview(req, interviewId) {
   if (!mongoose.isValidObjectId(interviewId)) {
@@ -46,6 +48,25 @@ export const createEvaluation = asyncHandler(async (req, res) => {
     interview.status = 'completed';
     await interview.save();
   }
+
+  await createNotification({
+    organizationId: req.user.organizationId,
+    recipientId: interview.createdBy,
+    type: 'evaluation_submitted',
+    title: 'Interview evaluation submitted',
+    message: `${req.user.name} submitted an evaluation for an interview you scheduled`,
+    resourceType: 'evaluation',
+    resourceId: evaluation._id,
+  });
+
+  await createAuditLog({
+    organizationId: req.user.organizationId,
+    actorId: req.user._id,
+    action: 'evaluation_submitted',
+    resourceType: 'evaluation',
+    resourceId: evaluation._id,
+    newValue: { interviewId, recommendation: evaluation.recommendation, overallRating: evaluation.overallRating },
+  });
 
   sendSuccess(res, { statusCode: 201, message: 'Evaluation submitted successfully', data: { evaluation } });
 });

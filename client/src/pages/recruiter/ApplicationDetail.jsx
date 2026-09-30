@@ -8,6 +8,9 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import FloatingSelect from '../../components/ui/FloatingSelect';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
+import ResumeViewerModal from '../../components/resume/ResumeViewerModal';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
 import { RECOMMENDATION_LABELS, RECOMMENDATION_VARIANT } from '../../validators/evaluation.schema';
 
@@ -33,6 +36,7 @@ const RATING_FIELDS = [
 export default function RecruiterApplicationDetail() {
   const { id } = useParams();
   const [state, setState] = useState({ status: 'loading', application: null });
+  const [resumeViewerOpen, setResumeViewerOpen] = useState(false);
   const [statusValue, setStatusValue] = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
   const [statusError, setStatusError] = useState('');
@@ -168,11 +172,11 @@ export default function RecruiterApplicationDetail() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-muted">Loading application...</p>;
+    return <PageLoading label="Loading application..." />;
   }
 
   if (state.status === 'error') {
-    return <p className="text-error">Unable to load this application. Please try again.</p>;
+    return <PageError message="Unable to load this application." onRetry={loadApplication} />;
   }
 
   const application = state.application;
@@ -200,9 +204,9 @@ export default function RecruiterApplicationDetail() {
       <div className="application-detail__body">
         <p>
           <span className="application-detail__label">Resume:</span>{' '}
-          <a href={application.resumeSnapshot.url} target="_blank" rel="noreferrer" className="link-accent">
-            {application.resumeSnapshot.fileName}
-          </a>
+          <button type="button" className="resume-viewer__trigger" onClick={() => setResumeViewerOpen(true)}>
+            <span className="link-accent">{application.resumeSnapshot.fileName}</span>
+          </button>
         </p>
         {application.coverLetter && (
           <div>
@@ -279,7 +283,7 @@ export default function RecruiterApplicationDetail() {
           </div>
         )}
 
-        {screeningError && <p className="text-error">{screeningError}</p>}
+        {screeningError && <p className="text-error" role="alert">{screeningError}</p>}
       </section>
 
       <section className="card card--padded card--shadow application-detail__status-card">
@@ -298,7 +302,7 @@ export default function RecruiterApplicationDetail() {
             {statusSaving ? 'Updating...' : 'Update status'}
           </Button>
         </div>
-        {statusError && <p className="text-error">{statusError}</p>}
+        {statusError && <p className="text-error" role="alert">{statusError}</p>}
 
         {application.statusHistory?.length > 0 && (
           <ul className="application-detail__history">
@@ -351,14 +355,14 @@ export default function RecruiterApplicationDetail() {
           value={decisionNotes}
           onChange={(e) => setDecisionNotes(e.target.value)}
         />
-        {decisionError && <p className="text-error">{decisionError}</p>}
+        {decisionError && <p className="text-error" role="alert">{decisionError}</p>}
       </section>
 
       <section className="card card--padded card--shadow application-detail__status-card">
         <h2 className="profile-page__section-title">Evaluations</h2>
 
         {evaluationsStatus === 'loading' && <p className="text-muted">Loading evaluations...</p>}
-        {evaluationsStatus === 'error' && <p className="text-error">Unable to load evaluations.</p>}
+        {evaluationsStatus === 'error' && <p className="text-error" role="alert">Unable to load evaluations.</p>}
         {evaluationsStatus === 'success' && evaluations.length === 0 && (
           <p className="text-faint">No evaluations submitted yet.</p>
         )}
@@ -397,10 +401,10 @@ export default function RecruiterApplicationDetail() {
             {isSubmitting ? 'Adding...' : 'Add note'}
           </Button>
         </form>
-        {noteError && <p className="text-error">{noteError}</p>}
+        {noteError && <p className="text-error" role="alert">{noteError}</p>}
 
         {notesStatus === 'loading' && <p className="text-muted">Loading notes...</p>}
-        {notesStatus === 'error' && <p className="text-error">Unable to load notes.</p>}
+        {notesStatus === 'error' && <p className="text-error" role="alert">Unable to load notes.</p>}
         {notesStatus === 'success' && (
           <ul className="application-detail__notes-list">
             {notes.length === 0 && <li className="text-faint">No notes yet.</li>}
@@ -415,6 +419,14 @@ export default function RecruiterApplicationDetail() {
           </ul>
         )}
       </section>
+
+      <ResumeViewerModal
+        open={resumeViewerOpen}
+        onClose={() => setResumeViewerOpen(false)}
+        resumeUrl={application.resumeSnapshot.url}
+        fileName={application.resumeSnapshot.fileName}
+        fileType={application.resumeSnapshot.fileType}
+      />
     </div>
   );
 }

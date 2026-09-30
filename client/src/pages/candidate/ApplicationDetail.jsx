@@ -1,26 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { applicationsApi } from '../../api/applicationsApi';
 import Badge from '../../components/ui/Badge';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
 
 export default function CandidateApplicationDetail() {
   const { id } = useParams();
   const [state, setState] = useState({ status: 'loading', application: null });
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setState((s) => ({ ...s, status: 'loading' }));
     applicationsApi
       .get(id)
       .then((res) => setState({ status: 'success', application: res.data.data.application }))
       .catch(() => setState({ status: 'error', application: null }));
   }, [id]);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
   if (state.status === 'loading') {
-    return <p className="text-muted">Loading application...</p>;
+    return <PageLoading label="Loading application..." />;
   }
 
   if (state.status === 'error') {
-    return <p className="text-error">Unable to load this application. Please try again.</p>;
+    return <PageError message="Unable to load this application." onRetry={load} />;
   }
 
   const application = state.application;

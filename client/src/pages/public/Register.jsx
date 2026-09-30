@@ -61,7 +61,11 @@ export default function Register() {
             {...register('password')}
           />
 
-          {serverError && <p className="text-error">{serverError}</p>}
+          {serverError && (
+            <p className="text-error" role="alert">
+              {serverError}
+            </p>
+          )}
 
           <Button type="submit" disabled={isSubmitting} className="btn--block">
             {isSubmitting ? 'Creating account...' : 'Create account'}

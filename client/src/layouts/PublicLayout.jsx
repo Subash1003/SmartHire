@@ -7,6 +7,9 @@ export default function PublicLayout() {
 
   return (
     <div className="site">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <header className="site-header">
         <div className="site-header__inner">
           <Link to="/" className="site-header__logo">
@@ -35,7 +38,7 @@ export default function PublicLayout() {
         </div>
       </header>
 
-      <main className="site-main">
+      <main id="main-content" className="site-main">
         <Outlet />
       </main>
 

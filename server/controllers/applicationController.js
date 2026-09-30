@@ -3,11 +3,19 @@ import Application from '../models/Application.js';
 import Job from '../models/Job.js';
 import CandidateProfile from '../models/CandidateProfile.js';
 import Interview from '../models/Interview.js';
+import User from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { parsePagination, paginate } from '../utils/paginate.js';
 import { assertSameOrganization } from '../middleware/tenantMiddleware.js';
+import { createNotification } from '../services/notificationService.js';
+import {
+  sendApplicationConfirmationEmail,
+  sendApplicationStatusEmail,
+  sendApplicationDecisionEmail,
+} from '../services/emailService.js';
+import { createAuditLog } from '../services/auditService.js';
 
 export const createApplication = asyncHandler(async (req, res) => {
   const { jobId, coverLetter, expectedSalary, availability } = req.body;
@@ -45,6 +53,26 @@ export const createApplication = asyncHandler(async (req, res) => {
     expectedSalary,
     availability,
     statusHistory: [{ status: 'applied', changedBy: req.user._id }],
+  });
+
+  await createNotification({
+    organizationId: job.organizationId,
+    recipientId: job.createdBy,
+    type: 'new_application',
+    title: 'New application received',
+    message: `${req.user.name} applied for ${job.title}`,
+    resourceType: 'application',
+    resourceId: application._id,
+  });
+  await sendApplicationConfirmationEmail(req.user, job);
+
+  await createAuditLog({
+    organizationId: job.organizationId,
+    actorId: req.user._id,
+    action: 'application_submitted',
+    resourceType: 'application',
+    resourceId: application._id,
+    newValue: { jobId: job._id, status: application.status },
   });
 
   sendSuccess(res, { statusCode: 201, message: 'Application submitted successfully', data: { application } });
@@ -209,10 +237,36 @@ export async function findOrgScopedApplication(req) {
 export const updateApplicationStatus = asyncHandler(async (req, res) => {
   const application = await findOrgScopedApplication(req);
   const { status } = req.body;
+  const previousStatus = application.status;
 
   application.status = status;
   application.statusHistory.push({ status, changedBy: req.user._id });
   await application.save();
+
+  const [candidate, job] = await Promise.all([
+    User.findById(application.candidateId),
+    Job.findById(application.jobId),
+  ]);
+  await createNotification({
+    organizationId: application.organizationId,
+    recipientId: application.candidateId,
+    type: 'application_status_changed',
+    title: 'Application status updated',
+    message: `Your application for ${job.title} is now: ${status}`,
+    resourceType: 'application',
+    resourceId: application._id,
+  });
+  await sendApplicationStatusEmail(candidate, job, status);
+
+  await createAuditLog({
+    organizationId: application.organizationId,
+    actorId: req.user._id,
+    action: 'application_status_changed',
+    resourceType: 'application',
+    resourceId: application._id,
+    previousValue: { status: previousStatus },
+    newValue: { status },
+  });
 
   sendSuccess(res, { message: 'Application status updated successfully', data: { application } });
 });
@@ -220,6 +274,7 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
 export const makeDecision = asyncHandler(async (req, res) => {
   const application = await findOrgScopedApplication(req);
   const { status, notes } = req.body;
+  const previousStatus = application.status;
 
   application.status = status;
   application.statusHistory.push({ status, changedBy: req.user._id });
@@ -227,6 +282,31 @@ export const makeDecision = asyncHandler(async (req, res) => {
   await application.save();
 
   const populated = await application.populate('decision.madeBy', 'name');
+
+  const [candidate, job] = await Promise.all([
+    User.findById(application.candidateId),
+    Job.findById(application.jobId),
+  ]);
+  await createNotification({
+    organizationId: application.organizationId,
+    recipientId: application.candidateId,
+    type: 'application_decision',
+    title: 'A decision has been made on your application',
+    message: `Your application for ${job.title}: ${status}`,
+    resourceType: 'application',
+    resourceId: application._id,
+  });
+  await sendApplicationDecisionEmail(candidate, job, status);
+
+  await createAuditLog({
+    organizationId: application.organizationId,
+    actorId: req.user._id,
+    action: 'hiring_decision_made',
+    resourceType: 'application',
+    resourceId: application._id,
+    previousValue: { status: previousStatus },
+    newValue: { status, notes: notes || '' },
+  });
 
   sendSuccess(res, { message: 'Hiring decision recorded successfully', data: { application: populated } });
 });

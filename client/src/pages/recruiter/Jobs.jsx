@@ -6,6 +6,7 @@ import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import FloatingSelect from '../../components/ui/FloatingSelect';
+import PageError from '../../components/ui/PageError';
 
 const STATUS_VARIANT = {
   draft: 'neutral',
@@ -89,7 +90,7 @@ export default function RecruiterJobs() {
 
       <div className="card">
         {state.status === 'error' ? (
-          <p className="table-error">Unable to load jobs. Please try again.</p>
+          <PageError message="Unable to load jobs." onRetry={loadJobs} />
         ) : (
           <>
             <DataTable columns={columns} rows={state.jobs} rowKey="_id" loading={state.status === 'loading'} emptyMessage="No jobs yet." />

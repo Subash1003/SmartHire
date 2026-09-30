@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { parsePagination, paginate } from '../utils/paginate.js';
 import { assertSameOrganization } from '../middleware/tenantMiddleware.js';
+import { createAuditLog } from '../services/auditService.js';
 
 const SALT_ROUNDS = 12;
 
@@ -66,6 +67,15 @@ export const createUser = asyncHandler(async (req, res) => {
 
   const user = await User.findById(created._id);
 
+  await createAuditLog({
+    organizationId: req.user.organizationId,
+    actorId: req.user._id,
+    action: 'user_created',
+    resourceType: 'user',
+    resourceId: user._id,
+    newValue: { name: user.name, email: user.email, role: user.role },
+  });
+
   sendSuccess(res, {
     statusCode: 201,
     message: 'User created successfully',
@@ -88,8 +98,21 @@ export const updateUser = asyncHandler(async (req, res) => {
     }
   }
 
+  const previousRole = user.role;
   Object.assign(user, req.body);
   await user.save();
+
+  if (req.body.role && req.body.role !== previousRole) {
+    await createAuditLog({
+      organizationId: req.user.organizationId,
+      actorId: req.user._id,
+      action: 'user_role_changed',
+      resourceType: 'user',
+      resourceId: user._id,
+      previousValue: { role: previousRole },
+      newValue: { role: user.role },
+    });
+  }
 
   sendSuccess(res, { message: 'User updated successfully', data: { user } });
 });

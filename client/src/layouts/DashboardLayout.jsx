@@ -1,11 +1,14 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/ui/Button';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 const NAV_ITEMS = {
   admin: [
     { to: '/admin/dashboard', label: 'Dashboard' },
     { to: '/admin/users', label: 'Users' },
+    { to: '/admin/analytics', label: 'Analytics' },
+    { to: '/admin/audit-logs', label: 'Audit Logs' },
     { to: '/admin/settings', label: 'Settings' },
   ],
   recruiter: [
@@ -14,6 +17,7 @@ const NAV_ITEMS = {
     { to: '/recruiter/applications', label: 'Applications' },
     { to: '/recruiter/candidates', label: 'Pipeline' },
     { to: '/recruiter/interviews', label: 'Interviews' },
+    { to: '/recruiter/analytics', label: 'Analytics' },
   ],
   interviewer: [
     { to: '/interviewer/dashboard', label: 'Dashboard' },
@@ -23,6 +27,7 @@ const NAV_ITEMS = {
     { to: '/candidate/dashboard', label: 'Dashboard' },
     { to: '/candidate/applications', label: 'My Applications' },
     { to: '/candidate/profile', label: 'Profile' },
+    { to: '/candidate/notifications', label: 'Notifications' },
   ],
 };
 
@@ -38,6 +43,9 @@ export default function DashboardLayout() {
 
   return (
     <div className="dashboard">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <header className="dashboard-header">
         <div className="dashboard-header__inner">
           <span className="dashboard-header__logo">SmartHire</span>
@@ -45,6 +53,7 @@ export default function DashboardLayout() {
             <span className="dashboard-header__user">
               {user?.name} &middot; <span className="capitalize">{user?.role}</span>
             </span>
+            <NotificationBell />
             <Button variant="secondary" onClick={handleLogout}>
               Log out
             </Button>
@@ -70,7 +79,7 @@ export default function DashboardLayout() {
           </ul>
         </nav>
 
-        <main className="dashboard-main">
+        <main id="main-content" className="dashboard-main">
           <Outlet />
         </main>
       </div>

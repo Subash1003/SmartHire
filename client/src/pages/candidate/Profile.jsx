@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { candidateProfileApi } from '../../api/candidateProfileApi';
@@ -8,11 +8,15 @@ import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import Button from '../../components/ui/Button';
 import FileUpload from '../../components/ui/FileUpload';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 
 export default function CandidateProfile() {
   const [status, setStatus] = useState('loading');
   const [serverError, setServerError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [savedValues, setSavedValues] = useState(null);
   const [resume, setResume] = useState(null);
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeError, setResumeError] = useState('');
@@ -24,12 +28,13 @@ export default function CandidateProfile() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(updateCandidateProfileSchema) });
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setStatus('loading');
     candidateProfileApi
       .getMine()
       .then((res) => {
         const profile = res.data.data.profile;
-        reset({
+        const values = {
           phone: profile.phone || '',
           location: profile.location || '',
           summary: profile.summary || '',
@@ -37,12 +42,31 @@ export default function CandidateProfile() {
           portfolio: profile.portfolio || '',
           github: profile.github || '',
           linkedin: profile.linkedin || '',
-        });
+        };
+        reset(values);
+        setSavedValues(values);
+        setIsEditing(false);
         setResume(profile.resume || null);
         setStatus('success');
       })
       .catch(() => setStatus('error'));
   }, [reset]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const startEditing = () => {
+    setSaved(false);
+    setServerError('');
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    if (savedValues) reset(savedValues);
+    setServerError('');
+    setIsEditing(false);
+  };
 
   const onSubmit = async (values) => {
     setServerError('');
@@ -57,7 +81,9 @@ export default function CandidateProfile() {
 
     try {
       await candidateProfileApi.updateMine({ ...rest, skills });
+      setSavedValues(values);
       setSaved(true);
+      setIsEditing(false);
     } catch (err) {
       setServerError(getApiErrorMessage(err, 'Unable to save your profile.'));
     }
@@ -77,11 +103,11 @@ export default function CandidateProfile() {
   };
 
   if (status === 'loading') {
-    return <p className="text-muted">Loading your profile...</p>;
+    return <PageLoading label="Loading your profile..." />;
   }
 
   if (status === 'error') {
-    return <p className="text-error">Unable to load your profile. Please try again.</p>;
+    return <PageError message="Unable to load your profile." onRetry={load} />;
   }
 
   return (
@@ -111,12 +137,22 @@ export default function CandidateProfile() {
       </section>
 
       <div className="card card--padded card--shadow form-page__card">
+        <div className="dashboard-page__header">
+          <h2 className="profile-page__section-title">Profile details</h2>
+          {!isEditing && (
+            <Button type="button" variant="secondary" onClick={startEditing}>
+              Edit
+            </Button>
+          )}
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="stack stack--gap-4" noValidate>
-          <FloatingInput id="phone" label="Phone" error={errors.phone?.message} {...register('phone')} />
-          <FloatingInput id="location" label="Location" error={errors.location?.message} {...register('location')} />
+          <FloatingInput id="phone" label="Phone" disabled={!isEditing} error={errors.phone?.message} {...register('phone')} />
+          <FloatingInput id="location" label="Location" disabled={!isEditing} error={errors.location?.message} {...register('location')} />
           <FloatingTextarea
             id="summary"
             label="Professional summary"
+            disabled={!isEditing}
             error={errors.summary?.message}
             {...register('summary')}
           />
@@ -124,19 +160,31 @@ export default function CandidateProfile() {
             id="skillsText"
             label="Skills (comma-separated)"
             placeholder="React, Node.js, MongoDB"
+            disabled={!isEditing}
             error={errors.skillsText?.message}
             {...register('skillsText')}
           />
-          <FloatingInput id="portfolio" label="Portfolio URL" error={errors.portfolio?.message} {...register('portfolio')} />
-          <FloatingInput id="github" label="GitHub URL" error={errors.github?.message} {...register('github')} />
-          <FloatingInput id="linkedin" label="LinkedIn URL" error={errors.linkedin?.message} {...register('linkedin')} />
+          <FloatingInput id="portfolio" label="Portfolio URL" disabled={!isEditing} error={errors.portfolio?.message} {...register('portfolio')} />
+          <FloatingInput id="github" label="GitHub URL" disabled={!isEditing} error={errors.github?.message} {...register('github')} />
+          <FloatingInput id="linkedin" label="LinkedIn URL" disabled={!isEditing} error={errors.linkedin?.message} {...register('linkedin')} />
 
-          {serverError && <p className="text-error">{serverError}</p>}
+          {serverError && (
+            <p className="text-error" role="alert">
+              {serverError}
+            </p>
+          )}
           {saved && <p className="text-success">Profile saved.</p>}
 
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save profile'}
-          </Button>
+          {isEditing && (
+            <div className="cluster cluster--gap-2">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save profile'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={cancelEditing} disabled={isSubmitting}>
+                Cancel
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>

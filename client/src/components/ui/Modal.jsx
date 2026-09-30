@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ open, onClose, title, children }) {
+export default function Modal({ open, onClose, title, children, size = 'default' }) {
   const dialogRef = useRef(null);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Modal({ open, onClose, title, children }) {
         aria-labelledby="modal-title"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="modal"
+        className={`modal ${size === 'wide' ? 'modal--wide' : ''}`.trim()}
       >
         <div className="modal__header">
           <h2 id="modal-title" className="modal__title">

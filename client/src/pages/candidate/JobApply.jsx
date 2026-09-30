@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -10,6 +10,8 @@ import { getApiErrorMessage } from '../../utils/getApiErrorMessage';
 import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import Button from '../../components/ui/Button';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 
 export default function JobApply() {
   const { id } = useParams();
@@ -23,7 +25,8 @@ export default function JobApply() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(applyFormSchema) });
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setState((s) => ({ ...s, status: 'loading' }));
     Promise.all([jobsApi.get(id), candidateProfileApi.getMine()])
       .then(([jobRes, profileRes]) => {
         setState({
@@ -34,6 +37,10 @@ export default function JobApply() {
       })
       .catch(() => setState({ status: 'error', job: null, hasResume: false }));
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const onSubmit = async (values) => {
     setServerError('');
@@ -46,11 +53,11 @@ export default function JobApply() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-muted">Loading...</p>;
+    return <PageLoading />;
   }
 
   if (state.status === 'error') {
-    return <p className="text-error">Unable to load this job. Please try again.</p>;
+    return <PageError message="Unable to load this job." onRetry={load} />;
   }
 
   if (!state.hasResume) {
@@ -92,7 +99,11 @@ export default function JobApply() {
             {...register('availability')}
           />
 
-          {serverError && <p className="text-error">{serverError}</p>}
+          {serverError && (
+            <p className="text-error" role="alert">
+              {serverError}
+            </p>
+          )}
 
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Submitting...' : 'Submit application'}

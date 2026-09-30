@@ -15,6 +15,7 @@ import CandidateProfile from '../pages/candidate/Profile';
 import JobApply from '../pages/candidate/JobApply';
 import CandidateApplications from '../pages/candidate/Applications';
 import CandidateApplicationDetail from '../pages/candidate/ApplicationDetail';
+import CandidateNotifications from '../pages/candidate/Notifications';
 import RecruiterDashboard from '../pages/recruiter/Dashboard';
 import RecruiterJobs from '../pages/recruiter/Jobs';
 import RecruiterJobForm from '../pages/recruiter/JobForm';
@@ -24,12 +25,15 @@ import RecruiterApplicationDetail from '../pages/recruiter/ApplicationDetail';
 import RecruiterPipeline from '../pages/recruiter/Pipeline';
 import RecruiterInterviews from '../pages/recruiter/Interviews';
 import RecruiterInterviewForm from '../pages/recruiter/InterviewForm';
+import RecruiterAnalytics from '../pages/recruiter/Analytics';
 import InterviewerDashboard from '../pages/interviewer/Dashboard';
 import InterviewerInterviews from '../pages/interviewer/Interviews';
 import InterviewerInterviewDetail from '../pages/interviewer/InterviewDetail';
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers from '../pages/admin/Users';
 import AdminSettings from '../pages/admin/Settings';
+import AdminAnalytics from '../pages/admin/Analytics';
+import AdminAuditLogs from '../pages/admin/AuditLogs';
 
 export default function AppRoutes() {
   return (
@@ -52,6 +56,7 @@ export default function AppRoutes() {
             <Route path="/candidate/jobs/:id/apply" element={<JobApply />} />
             <Route path="/candidate/applications" element={<CandidateApplications />} />
             <Route path="/candidate/applications/:id" element={<CandidateApplicationDetail />} />
+            <Route path="/candidate/notifications" element={<CandidateNotifications />} />
           </Route>
           <Route element={<RoleRoute allow={['recruiter']} />}>
             <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
@@ -65,6 +70,7 @@ export default function AppRoutes() {
             <Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
             <Route path="/recruiter/interviews/schedule" element={<RecruiterInterviewForm />} />
             <Route path="/recruiter/interviews/:id/edit" element={<RecruiterInterviewForm />} />
+            <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
           </Route>
           <Route element={<RoleRoute allow={['interviewer']} />}>
             <Route path="/interviewer/dashboard" element={<InterviewerDashboard />} />
@@ -75,6 +81,8 @@ export default function AppRoutes() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           </Route>
         </Route>
       </Route>

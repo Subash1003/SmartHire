@@ -2,11 +2,19 @@ import mongoose from 'mongoose';
 import Interview from '../models/Interview.js';
 import Application from '../models/Application.js';
 import User from '../models/User.js';
+import Job from '../models/Job.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { parsePagination, paginate } from '../utils/paginate.js';
 import { assertSameOrganization } from '../middleware/tenantMiddleware.js';
+import { createNotification } from '../services/notificationService.js';
+import {
+  sendInterviewScheduledEmail,
+  sendInterviewRescheduledEmail,
+  sendInterviewCancelledEmail,
+} from '../services/emailService.js';
+import { createAuditLog } from '../services/auditService.js';
 
 const POPULATE_FIELDS = [
   { path: 'applicationId', select: 'status' },
@@ -75,6 +83,37 @@ export const scheduleInterview = asyncHandler(async (req, res) => {
   });
 
   const populated = await interview.populate(POPULATE_FIELDS);
+  const job = await Job.findById(interview.jobId);
+
+  await createNotification({
+    organizationId: req.user.organizationId,
+    recipientId: populated.candidateId._id,
+    type: 'interview_scheduled',
+    title: 'Interview scheduled',
+    message: `An interview has been scheduled for your application to ${job.title}`,
+    resourceType: 'interview',
+    resourceId: interview._id,
+  });
+  await createNotification({
+    organizationId: req.user.organizationId,
+    recipientId: populated.interviewerId._id,
+    type: 'interview_assigned',
+    title: 'New interview assigned',
+    message: `You've been assigned to interview a candidate for ${job.title}`,
+    resourceType: 'interview',
+    resourceId: interview._id,
+  });
+  await sendInterviewScheduledEmail(populated.candidateId, interview, job);
+  await sendInterviewScheduledEmail(populated.interviewerId, interview, job);
+
+  await createAuditLog({
+    organizationId: req.user.organizationId,
+    actorId: req.user._id,
+    action: 'interview_scheduled',
+    resourceType: 'interview',
+    resourceId: interview._id,
+    newValue: { applicationId: application._id, interviewerId, startTime, endTime },
+  });
 
   sendSuccess(res, { statusCode: 201, message: 'Interview scheduled successfully', data: { interview: populated } });
 });
@@ -129,6 +168,11 @@ export const updateInterview = asyncHandler(async (req, res) => {
   const interview = await findAccessibleInterview(req);
 
   const { interviewerId, type, round, date, startTime, endTime, meetingLink, notes } = req.body;
+  const previousValue = {
+    interviewerId: interview.interviewerId._id,
+    startTime: interview.startTime,
+    endTime: interview.endTime,
+  };
 
   await assertValidInterviewer(req.user.organizationId, interviewerId);
 
@@ -148,6 +192,39 @@ export const updateInterview = asyncHandler(async (req, res) => {
   await interview.save();
 
   const populated = await interview.populate(POPULATE_FIELDS);
+  const job = await Job.findById(interview.jobId);
+
+  await createNotification({
+    organizationId: req.user.organizationId,
+    recipientId: populated.candidateId._id,
+    type: 'interview_rescheduled',
+    title: 'Interview rescheduled',
+    message: `Your interview for ${job.title} has been rescheduled`,
+    resourceType: 'interview',
+    resourceId: interview._id,
+  });
+  await createNotification({
+    organizationId: req.user.organizationId,
+    recipientId: populated.interviewerId._id,
+    type: 'interview_updated',
+    title: 'Interview updated',
+    message: `An interview you're assigned to for ${job.title} has been updated`,
+    resourceType: 'interview',
+    resourceId: interview._id,
+  });
+  await sendInterviewRescheduledEmail(populated.candidateId, interview, job);
+  await sendInterviewRescheduledEmail(populated.interviewerId, interview, job);
+
+  await createAuditLog({
+    organizationId: req.user.organizationId,
+    actorId: req.user._id,
+    action: 'interview_rescheduled',
+    resourceType: 'interview',
+    resourceId: interview._id,
+    previousValue,
+    newValue: { interviewerId, startTime, endTime },
+  });
+
   sendSuccess(res, { message: 'Interview rescheduled successfully', data: { interview: populated } });
 });
 
@@ -158,5 +235,30 @@ export const updateInterviewStatus = asyncHandler(async (req, res) => {
   await interview.save();
 
   const populated = await interview.populate(POPULATE_FIELDS);
+
+  if (req.body.status === 'cancelled') {
+    const job = await Job.findById(interview.jobId);
+    await createNotification({
+      organizationId: req.user.organizationId,
+      recipientId: populated.candidateId._id,
+      type: 'interview_cancelled',
+      title: 'Interview cancelled',
+      message: `Your interview for ${job.title} has been cancelled`,
+      resourceType: 'interview',
+      resourceId: interview._id,
+    });
+    await createNotification({
+      organizationId: req.user.organizationId,
+      recipientId: populated.interviewerId._id,
+      type: 'interview_cancelled',
+      title: 'Interview cancelled',
+      message: `An interview you were assigned to for ${job.title} has been cancelled`,
+      resourceType: 'interview',
+      resourceId: interview._id,
+    });
+    await sendInterviewCancelledEmail(populated.candidateId, interview, job);
+    await sendInterviewCancelledEmail(populated.interviewerId, interview, job);
+  }
+
   sendSuccess(res, { message: 'Interview status updated successfully', data: { interview: populated } });
 });

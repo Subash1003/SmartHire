@@ -9,6 +9,7 @@ import FloatingSelect from '../../components/ui/FloatingSelect';
 import Pagination from '../../components/ui/Pagination';
 import EmptyState from '../../components/ui/EmptyState';
 import Badge from '../../components/ui/Badge';
+import PageError from '../../components/ui/PageError';
 
 const EMPLOYMENT_FILTER_OPTIONS = [{ value: '', label: 'All types' }, ...EMPLOYMENT_TYPE_OPTIONS];
 const WORK_MODE_FILTER_OPTIONS = [{ value: '', label: 'All work modes' }, ...WORK_MODE_OPTIONS];
@@ -98,7 +99,7 @@ export default function Jobs() {
           </div>
         )}
 
-        {state.status === 'error' && <p className="job-list__error">Unable to load jobs. Please try again.</p>}
+        {state.status === 'error' && <PageError message="Unable to load jobs." onRetry={loadJobs} />}
 
         {state.status === 'success' && state.jobs.length === 0 && (
           <EmptyState title="No jobs found" description="Try adjusting your search or filters." />

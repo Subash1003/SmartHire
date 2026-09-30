@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import Button from '../../components/ui/Button';
 
@@ -42,7 +43,9 @@ export default function Home() {
         {status === 'error' && <span className="text-error">{message}</span>}
       </div>
 
-      <Button>Browse Jobs</Button>
+      <Link to="/jobs">
+        <Button>Browse Jobs</Button>
+      </Link>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import FloatingSelect from '../../components/ui/FloatingSelect';
+import PageError from '../../components/ui/PageError';
 import { INTERVIEW_STATUS_LABELS, INTERVIEW_STATUS_VARIANT } from '../../validators/interviewStatus';
 
 const STATUS_OPTIONS = [
@@ -90,11 +91,15 @@ export default function RecruiterInterviews() {
         />
       </div>
 
-      {actionError && <p className="text-error">{actionError}</p>}
+      {actionError && (
+        <p className="text-error" role="alert">
+          {actionError}
+        </p>
+      )}
 
       <div className="card">
         {state.status === 'error' ? (
-          <p className="table-error">Unable to load interviews. Please try again.</p>
+          <PageError message="Unable to load interviews." onRetry={load} />
         ) : (
           <>
             <DataTable

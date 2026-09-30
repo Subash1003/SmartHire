@@ -1,26 +1,34 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { isAiConfigured, aiApiKey, AI_MODEL } from '../config/ai.js';
 import { ApiError } from '../utils/ApiError.js';
 
 const MAX_RESUME_CHARS = 6000;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+// gpt-oss models reason before answering (visible as a separate "reasoning"
+// field in the response), which eats into the token budget before the
+// actual tool call is emitted — keep this generous so a real resume/job
+// pairing doesn't get cut off mid-reasoning.
+const MAX_OUTPUT_TOKENS = 4096;
 
 const SCREENING_TOOL = {
-  name: 'provide_resume_screening',
-  description: 'Report a structured, assistive analysis of how well a resume matches a job posting.',
-  input_schema: {
-    type: 'object',
-    properties: {
-      matchScore: { type: 'integer', minimum: 0, maximum: 100, description: 'Overall match score 0-100' },
-      matchedSkills: { type: 'array', items: { type: 'string' }, description: 'Required/preferred skills found in the resume' },
-      missingSkills: { type: 'array', items: { type: 'string' }, description: 'Required/preferred skills not found in the resume' },
-      experienceMatch: { type: 'integer', minimum: 0, maximum: 100, description: 'How well experience matches the role, 0-100' },
-      educationMatch: { type: 'integer', minimum: 0, maximum: 100, description: 'How well education matches the role, 0-100' },
-      summary: { type: 'string', description: 'Two to four sentence neutral summary of the fit, for a recruiter to read' },
+  type: 'function',
+  function: {
+    name: 'provide_resume_screening',
+    description: 'Report a structured, assistive analysis of how well a resume matches a job posting.',
+    parameters: {
+      type: 'object',
+      properties: {
+        matchScore: { type: 'integer', minimum: 0, maximum: 100, description: 'Overall match score 0-100' },
+        matchedSkills: { type: 'array', items: { type: 'string' }, description: 'Required/preferred skills found in the resume' },
+        missingSkills: { type: 'array', items: { type: 'string' }, description: 'Required/preferred skills not found in the resume' },
+        experienceMatch: { type: 'integer', minimum: 0, maximum: 100, description: 'How well experience matches the role, 0-100' },
+        educationMatch: { type: 'integer', minimum: 0, maximum: 100, description: 'How well education matches the role, 0-100' },
+        summary: { type: 'string', description: 'Two to four sentence neutral summary of the fit, for a recruiter to read' },
+      },
+      required: ['matchScore', 'matchedSkills', 'missingSkills', 'experienceMatch', 'educationMatch', 'summary'],
+      additionalProperties: false,
     },
-    required: ['matchScore', 'matchedSkills', 'missingSkills', 'experienceMatch', 'educationMatch', 'summary'],
-    additionalProperties: false,
   },
-  strict: true,
 };
 
 const SYSTEM_PROMPT = `You are an assistive resume-screening tool inside a recruitment platform. Your analysis helps a human recruiter; you never make or imply a hiring decision.
@@ -49,29 +57,50 @@ export async function screenResume({ job, resumeText }) {
     throw new ApiError(503, 'AI screening is not configured yet. Please try again later.');
   }
 
-  const client = new Anthropic({ apiKey: aiApiKey, timeout: 20_000 });
-
   let response;
   try {
-    response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: 2048,
-      output_config: { effort: 'low' },
-      system: SYSTEM_PROMPT,
-      tools: [SCREENING_TOOL],
-      tool_choice: { type: 'tool', name: 'provide_resume_screening' },
-      messages: [{ role: 'user', content: buildUserPrompt({ job, resumeText }) }],
+    const res = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${aiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        max_tokens: MAX_OUTPUT_TOKENS,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: buildUserPrompt({ job, resumeText }) },
+        ],
+        tools: [SCREENING_TOOL],
+        tool_choice: { type: 'function', function: { name: 'provide_resume_screening' } },
+      }),
+      signal: AbortSignal.timeout(20_000),
     });
-  } catch {
+
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => '');
+      throw new Error(`Groq API responded with ${res.status}: ${errorBody}`);
+    }
+
+    response = await res.json();
+  } catch (err) {
+    console.error('AI screening request failed:', err.message);
     throw new ApiError(503, 'AI screening is temporarily unavailable. Please try again later.');
   }
 
-  const toolUse = response.content.find((block) => block.type === 'tool_use');
-  if (!toolUse) {
+  const toolCall = response.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) {
     throw new ApiError(503, 'AI screening did not return a valid result. Please try again.');
   }
 
-  const result = toolUse.input;
+  let result;
+  try {
+    result = JSON.parse(toolCall.function.arguments);
+  } catch (err) {
+    console.error('AI screening returned malformed JSON:', err.message);
+    throw new ApiError(503, 'AI screening did not return a valid result. Please try again.');
+  }
 
   return {
     matchScore: result.matchScore,

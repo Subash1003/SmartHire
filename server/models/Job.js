@@ -33,6 +33,5 @@ const jobSchema = new mongoose.Schema(
 );
 
 jobSchema.index({ organizationId: 1, status: 1 });
-jobSchema.index({ title: 'text', description: 'text', requiredSkills: 'text' });
 
 export default mongoose.model('Job', jobSchema);

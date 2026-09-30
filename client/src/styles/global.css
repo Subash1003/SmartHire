@@ -110,19 +110,23 @@
   --line-height-normal: 1.5;
 
   /* Radius */
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.875rem;
   --radius-full: 9999px;
 
   /* Shadow */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 3px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-lg: 0 12px 24px -8px rgb(15 23 42 / 0.14), 0 4px 8px -4px rgb(15 23 42 / 0.08);
 
   /* Layout */
-  --content-max-width: 72rem; /* dashboard/page shell */
-  --content-max-width-md: 60rem; /* job listing etc. */
+  --content-max-width: 88rem; /* dashboard/page shell — wide enough that a
+    1440px display isn't left with large empty side margins */
+  --content-max-width-md: 68rem; /* job listing etc. */
   --form-max-width: 42rem; /* wide forms */
   --form-max-width-narrow: 28rem; /* auth forms */
+  --page-padding-inline: clamp(1rem, 3vw, 2.5rem); /* side padding that
+    grows a little on very wide screens instead of leaving a hard, fixed
+    16px gutter next to a huge empty margin */
   --input-height: 2.75rem;
   --header-height: 4rem;
   --sidebar-width: 12rem;
@@ -210,7 +214,7 @@ img {
   width: 100%;
   max-width: var(--content-max-width);
   margin-inline: auto;
-  padding-inline: var(--space-4);
+  padding-inline: var(--page-padding-inline);
 }
 
 /* Vertical flex stack with a gap — replaces ad-hoc "flex flex-col gap-*" */
@@ -268,7 +272,8 @@ img {
 .page {
   max-width: var(--content-max-width);
   margin-inline: auto;
-  padding: var(--space-10) var(--space-4);
+  padding-block: var(--space-10);
+  padding-inline: var(--page-padding-inline);
 }
 .page--md {
   max-width: var(--content-max-width-md);
@@ -370,14 +375,25 @@ img {
 .form-field__select,
 .form-field__textarea {
   width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-subtle);
   background-color: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
   font-size: var(--font-size-sm);
   outline: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Single-line controls get a fuller, pill-style curve; the multi-line
+   textarea keeps the standard card-ish radius since a pill reads oddly
+   once a box is taller than it is wide. */
+.form-field__input,
+.form-field__select {
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+}
+.form-field__textarea {
+  border-radius: var(--radius-lg);
 }
 
 .form-field__input,
@@ -440,14 +456,117 @@ img {
 }
 
 /* Select: no floating label present (bare filter dropdown) gets centered
-   vertical padding instead of the space reserved for a label */
+   vertical padding instead of the space reserved for a label.
+   .form-field__select is a <button> (the real <select> it controls is
+   visually hidden) so the open options panel can be fully custom-styled —
+   native <select> popups can't be restyled in any current browser. */
 .form-field__select {
   appearance: none;
   padding-right: var(--space-9);
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+.form-field__select:disabled {
+  cursor: not-allowed;
 }
 .form-field__select--no-label {
   padding-top: 0;
   padding-bottom: 0;
+}
+
+.form-field__select-value {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-field__select-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Selection/filter fields use a standard label above the control instead
+   of the floating notched label reserved for plain text inputs. */
+.form-field__label-standard {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+.form-field__label-standard--error {
+  color: var(--color-danger-text);
+}
+
+.form-field__listbox {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: var(--space-1_5);
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: modal-in 0.15s ease;
+
+  /* A long option list (e.g. audit log actions) still scrolls, but with a
+     slim rounded thumb instead of the browser's default scroll control —
+     the OS-style up/down arrow buttons look out of place on a floating,
+     rounded panel like this. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.form-field__listbox::-webkit-scrollbar {
+  width: 6px;
+}
+.form-field__listbox::-webkit-scrollbar-track {
+  background: transparent;
+}
+.form-field__listbox::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+}
+.form-field__listbox::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.form-field__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.form-field__option:not(:last-child) {
+  margin-bottom: 0.125rem;
+}
+.form-field__option--highlighted {
+  background-color: var(--color-surface-muted);
+}
+.form-field__option--selected {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary-700);
+  font-weight: var(--font-weight-medium);
+}
+.form-field__option-check {
+  flex-shrink: 0;
+  color: var(--color-primary-600);
 }
 
 .form-field__label {
@@ -490,9 +609,13 @@ img {
   position: absolute;
   right: var(--space-3);
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) rotate(0deg);
   color: var(--color-text-disabled);
   pointer-events: none;
+  transition: transform var(--transition-fast);
+}
+.form-field__chevron--open {
+  transform: translateY(-50%) rotate(180deg);
 }
 
 .form-field__toggle {
@@ -588,6 +711,8 @@ img {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
   background-color: var(--color-surface);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
 }
 
 .card--padded {
@@ -595,7 +720,7 @@ img {
 }
 
 .card--shadow {
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-lg);
 }
 
 /* ==========================================================================
@@ -645,6 +770,7 @@ img {
   justify-content: center;
   background-color: var(--color-overlay);
   padding-inline: var(--space-4);
+  animation: modal-overlay-in 0.15s ease;
 }
 
 .modal {
@@ -655,9 +781,27 @@ img {
   background-color: var(--color-surface);
   padding: var(--space-6);
   box-shadow: var(--shadow-lg);
+  animation: modal-in 0.15s ease;
+}
+
+@keyframes modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
 }
 .modal:focus-visible {
   outline: none;
+}
+
+.modal--wide {
+  max-width: 52rem;
 }
 
 .modal__header {
@@ -833,7 +977,8 @@ img {
 .site-header__inner {
   max-width: var(--content-max-width);
   margin-inline: auto;
-  padding: var(--space-4);
+  padding-block: var(--space-4);
+  padding-inline: var(--page-padding-inline);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -880,7 +1025,8 @@ img {
 .site-footer__inner {
   max-width: var(--content-max-width);
   margin-inline: auto;
-  padding: var(--space-6) var(--space-4);
+  padding-block: var(--space-6);
+  padding-inline: var(--page-padding-inline);
   font-size: var(--font-size-sm);
   color: var(--color-text-faint);
 }
@@ -903,7 +1049,8 @@ img {
 .dashboard-header__inner {
   max-width: var(--content-max-width);
   margin-inline: auto;
-  padding: var(--space-4);
+  padding-block: var(--space-4);
+  padding-inline: var(--page-padding-inline);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -927,7 +1074,8 @@ img {
   flex: 1;
   display: flex;
   gap: var(--space-8);
-  padding: var(--space-8) var(--space-4);
+  padding-block: var(--space-8);
+  padding-inline: var(--page-padding-inline);
 }
 
 .dashboard-sidebar {
@@ -997,6 +1145,7 @@ img {
 .filter-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--space-3);
 }
 
@@ -1047,6 +1196,7 @@ img {
 .link-accent {
   color: var(--color-primary-600);
   transition: color var(--transition-fast);
+  display: flex;
 }
 .link-accent:hover {
   color: var(--color-primary-700);
@@ -1127,6 +1277,7 @@ img {
 .job-filters {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
@@ -1305,6 +1456,7 @@ img {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
+  padding-bottom: 20px;
 }
 
 .profile-page__resume-current {
@@ -1485,6 +1637,7 @@ img {
   align-items: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-3);
+  margin-bottom: 15px;
 }
 
 .application-detail__history {
@@ -1533,13 +1686,416 @@ img {
 }
 
 /* ==========================================================================
-   19. Responsive media queries
+   19. Notifications
+   ========================================================================== */
+
+.notification-bell {
+  position: relative;
+}
+
+.notification-bell__trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+.notification-bell__trigger:hover {
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-border-subtle);
+}
+
+.notification-bell__badge {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-danger);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-bell__panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 22rem;
+  max-width: calc(100vw - var(--space-8));
+  max-height: 28rem;
+  overflow-y: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  animation: modal-in 0.15s ease;
+}
+
+.notification-bell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.notification-bell__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.notification-bell__mark-all {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary-700);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.notification-bell__empty {
+  padding: var(--space-6) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-faint);
+  text-align: center;
+}
+
+.notification-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: none;
+  border-inline: none;
+  border-top: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+.notification-item:last-child {
+  border-bottom: none;
+}
+.notification-item:hover {
+  background-color: var(--color-surface-muted);
+}
+.notification-item--unread {
+  background-color: var(--color-primary-soft);
+}
+
+.notification-item__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.notification-item__message {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.notification-item__time {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+}
+
+.notification-bell__footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+  text-align: center;
+}
+
+/* ==========================================================================
+   21. Analytics
+   ========================================================================== */
+
+.analytics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-4);
+}
+
+.kpi-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.kpi-card:hover {
+  border-color: var(--color-primary-200);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.kpi-card__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kpi-card__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.kpi-card__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-faint);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+
+.chart-card {
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.chart-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.chart-card__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--space-4);
+}
+
+.chart-card__empty {
+  padding: var(--space-8) 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-faint);
+}
+
+/* Shared hover-tooltip look for every analytics chart (Recharts' own
+   tooltip is unstyled by default) — rounded, bordered, shadowed to match
+   the rest of the app's floating UI (modals, dropdowns). */
+.chart-tooltip {
+  min-width: 8rem;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-xs);
+}
+
+.chart-tooltip__label {
+  margin-bottom: var(--space-1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.chart-tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  color: var(--color-text-muted);
+}
+.chart-tooltip__row strong {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.chart-tooltip__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.audit-log__value {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   23. Resume viewer
+   ========================================================================== */
+
+.resume-viewer__trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.resume-viewer__body {
+  height: 70vh;
+  max-height: 42rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.resume-viewer__frame {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+}
+
+.resume-viewer__docx {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+.resume-viewer__docx :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+.resume-viewer__docx p {
+  margin-bottom: var(--space-2);
+}
+.resume-viewer__docx ul,
+.resume-viewer__docx ol {
+  margin-bottom: var(--space-2);
+  padding-left: var(--space-6);
+  list-style: revert;
+}
+
+.resume-viewer__status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-text-faint);
+  font-size: var(--font-size-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.resume-viewer__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ==========================================================================
+   24. Page loading & error states
+   ========================================================================== */
+
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+  color: var(--color-text-faint);
+  font-size: var(--font-size-sm);
+}
+
+.page-loading__spinner {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border-subtle);
+  border-top-color: var(--color-primary);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+  color: var(--color-danger-text);
+  font-size: var(--font-size-sm);
+}
+
+/* ==========================================================================
+   25. Accessibility & motion
+   ========================================================================== */
+
+.skip-link {
+  position: absolute;
+  top: -3rem;
+  left: var(--space-4);
+  z-index: 100;
+  background-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: top var(--transition-fast);
+}
+.skip-link:focus {
+  top: var(--space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+   26. Responsive media queries
    Base styles above are desktop-oriented; these narrow the layout down for
    tablet and mobile. Grouped by breakpoint, each block commented with which
    sections it touches.
    ========================================================================== */
 
-/* ---- Tablet and below (≤768px): sections 11, 12, 14, 15 ---- */
+/* ---- Tablet and below (≤768px): sections 11, 12, 14, 15, 21 ---- */
 @media (max-width: 768px) {
   /* Public + dashboard header: let the logo/nav wrap instead of overflowing */
   .site-header__inner,
@@ -1548,7 +2104,14 @@ img {
     gap: var(--space-3);
   }
 
+  /* Analytics: two-column chart grid becomes one column */
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
   .site-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: var(--space-4);
   }
 
@@ -1589,11 +2152,23 @@ img {
   }
 }
 
-/* ---- Mobile (≤480px, covers 375px devices): sections 6, 8, 13, 14 ---- */
+/* ---- Mobile (≤480px, covers 375px devices): sections 6, 8, 13, 14, 17, 23 ---- */
 @media (max-width: 480px) {
   .page,
   .auth-page {
     padding-inline: var(--space-3);
+  }
+
+  /* Resume viewer: take almost the full viewport height on small screens */
+  .modal--wide {
+    max-width: 100%;
+  }
+  .resume-viewer__body {
+    height: 80vh;
+    max-height: none;
+  }
+  .resume-viewer__docx {
+    padding: var(--space-4);
   }
 
   .hero {
@@ -1603,6 +2178,7 @@ img {
     font-size: var(--font-size-2xl);
   }
 
+  .card,
   .card--padded,
   .auth-card,
   .modal {
@@ -1635,7 +2211,7 @@ img {
 /* ---- Desktop (≥1280px): section 3 ---- */
 @media (min-width: 1280px) {
   /* .container / .page / .dashboard-body already cap out at
-     --content-max-width (72rem ≈ 1152px) and center themselves, so no
+     --content-max-width (88rem ≈ 1408px) and center themselves, so no
      further widening is needed at this breakpoint — documented here so
      it's clear the lack of an override is intentional, not an oversight. */
 }

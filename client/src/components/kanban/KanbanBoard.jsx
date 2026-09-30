@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { applicationsApi } from '../../api/applicationsApi';
 import { STATUS_LABELS } from '../../validators/applicationStatus';
 import KanbanColumn from './KanbanColumn';
+import PageLoading from '../ui/PageLoading';
+import PageError from '../ui/PageError';
 
 const COLUMN_ORDER = [
   'applied',
@@ -56,17 +58,21 @@ export default function KanbanBoard() {
   };
 
   if (state.status === 'loading') {
-    return <p className="text-muted">Loading pipeline...</p>;
+    return <PageLoading label="Loading pipeline..." />;
   }
 
   if (state.status === 'error') {
-    return <p className="text-error">Unable to load the pipeline. Please try again.</p>;
+    return <PageError message="Unable to load the pipeline." onRetry={load} />;
   }
 
   return (
     <div className="dashboard-page">
       <h1 className="dashboard-page__title">Candidate pipeline</h1>
-      {actionError && <p className="text-error">{actionError}</p>}
+      {actionError && (
+        <p className="text-error" role="alert">
+          {actionError}
+        </p>
+      )}
 
       <div className="kanban-board">
         {COLUMN_ORDER.map((status) => (

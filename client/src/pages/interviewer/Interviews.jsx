@@ -1,19 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { interviewsApi } from '../../api/interviewsApi';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
+import PageError from '../../components/ui/PageError';
 import { INTERVIEW_STATUS_LABELS, INTERVIEW_STATUS_VARIANT } from '../../validators/interviewStatus';
 
 export default function InterviewerInterviews() {
   const [state, setState] = useState({ status: 'loading', interviews: [] });
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setState((s) => ({ ...s, status: 'loading' }));
     interviewsApi
       .list({ limit: 100 })
       .then((res) => setState({ status: 'success', interviews: res.data.data }))
       .catch(() => setState({ status: 'error', interviews: [] }));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const columns = [
     {
@@ -41,7 +47,7 @@ export default function InterviewerInterviews() {
 
       <div className="card">
         {state.status === 'error' ? (
-          <p className="table-error">Unable to load interviews. Please try again.</p>
+          <PageError message="Unable to load interviews." onRetry={load} />
         ) : (
           <DataTable
             columns={columns}

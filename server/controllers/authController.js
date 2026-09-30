@@ -13,7 +13,7 @@ import { signAccessToken } from '../utils/jwt.js';
 import { generateRawToken, hashToken } from '../utils/tokens.js';
 import { setAuthCookies, clearAuthCookies } from '../utils/cookies.js';
 import { jwtConfig } from '../config/jwt.js';
-import { isProduction } from '../config/env.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService.js';
 
 const SALT_ROUNDS = 12;
 
@@ -79,9 +79,7 @@ export const register = asyncHandler(async (req, res) => {
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   });
 
-  if (!isProduction) {
-    console.log(`[dev] Email verification link for ${user.email}: /verify-email?token=${rawToken}`);
-  }
+  await sendVerificationEmail(user, rawToken);
 
   await issueSession(res, user, req);
 
@@ -182,9 +180,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     });
 
-    if (!isProduction) {
-      console.log(`[dev] Password reset link for ${user.email}: /reset-password?token=${rawToken}`);
-    }
+    await sendPasswordResetEmail(user, rawToken);
   }
 
   // Always respond the same way, whether or not the email exists, to avoid

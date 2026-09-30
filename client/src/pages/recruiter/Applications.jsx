@@ -8,6 +8,7 @@ import Pagination from '../../components/ui/Pagination';
 import Badge from '../../components/ui/Badge';
 import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingSelect from '../../components/ui/FloatingSelect';
+import PageError from '../../components/ui/PageError';
 import { STATUS_LABELS, STATUS_VARIANT } from '../../validators/applicationStatus';
 
 const STATUS_OPTIONS = [{ value: '', label: 'All statuses' }, ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))];
@@ -121,7 +122,7 @@ export default function RecruiterApplications() {
 
       <div className="card">
         {state.status === 'error' ? (
-          <p className="table-error">Unable to load applications. Please try again.</p>
+          <PageError message="Unable to load applications." onRetry={load} />
         ) : (
           <>
             <DataTable

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -12,6 +12,8 @@ import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingSelect from '../../components/ui/FloatingSelect';
 import FloatingTextarea from '../../components/ui/FloatingTextarea';
 import Button from '../../components/ui/Button';
+import PageLoading from '../../components/ui/PageLoading';
+import PageError from '../../components/ui/PageError';
 
 export default function InterviewForm() {
   const { id } = useParams();
@@ -32,33 +34,36 @@ export default function InterviewForm() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(interviewFormSchema), defaultValues: { type: 'technical', round: 1 } });
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const interviewersRes = await usersApi.list({ role: 'interviewer', limit: 100 });
-        setInterviewerOptions(
-          interviewersRes.data.data.map((u) => ({ value: u._id, label: u.name }))
-        );
+  const load = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const interviewersRes = await usersApi.list({ role: 'interviewer', limit: 100 });
+      setInterviewerOptions(
+        interviewersRes.data.data.map((u) => ({ value: u._id, label: u.name }))
+      );
 
-        if (isEditing) {
-          const interviewRes = await interviewsApi.get(id);
-          const interview = interviewRes.data.data.interview;
-          setContext({ candidateName: interview.candidateId?.name, jobTitle: interview.jobId?.title });
-          reset(fromInterview(interview));
-        } else if (applicationId) {
-          const appRes = await applicationsApi.get(applicationId);
-          const application = appRes.data.data.application;
-          setContext({ candidateName: application.candidateId?.name, jobTitle: application.jobId?.title });
-        } else {
-          setStatus('error');
-          return;
-        }
-
-        setStatus('ready');
-      } catch {
+      if (isEditing) {
+        const interviewRes = await interviewsApi.get(id);
+        const interview = interviewRes.data.data.interview;
+        setContext({ candidateName: interview.candidateId?.name, jobTitle: interview.jobId?.title });
+        reset(fromInterview(interview));
+      } else if (applicationId) {
+        const appRes = await applicationsApi.get(applicationId);
+        const application = appRes.data.data.application;
+        setContext({ candidateName: application.candidateId?.name, jobTitle: application.jobId?.title });
+      } else {
         setStatus('error');
+        return;
       }
+
+      setStatus('ready');
+    } catch {
+      setStatus('error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, applicationId, isEditing]);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, applicationId]);
@@ -79,11 +84,11 @@ export default function InterviewForm() {
   };
 
   if (status === 'loading') {
-    return <p className="text-muted">Loading...</p>;
+    return <PageLoading />;
   }
 
   if (status === 'error') {
-    return <p className="text-error">Unable to load this form. Please try again.</p>;
+    return <PageError message="Unable to load this form." onRetry={load} />;
   }
 
   return (
@@ -138,7 +143,11 @@ export default function InterviewForm() {
           />
           <FloatingTextarea id="notes" label="Notes (optional)" rows={3} error={errors.notes?.message} {...register('notes')} />
 
-          {serverError && <p className="text-error">{serverError}</p>}
+          {serverError && (
+            <p className="text-error" role="alert">
+              {serverError}
+            </p>
+          )}
 
           <Button type="submit" disabled={isSubmitting} className="btn--block">
             {isSubmitting ? 'Saving...' : isEditing ? 'Save changes' : 'Schedule interview'}
